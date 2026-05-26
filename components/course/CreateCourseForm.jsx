@@ -20,7 +20,7 @@ export default function CreateCourseForm(){
       <CardHeader>
         <CardTitle>Create New Course</CardTitle>
         <CardDescription>
-          Describe what you want to learn and AI Examiner will generate a
+          Describe what you want to learn and Syllabro Ai will generate a
           structured course.
         </CardDescription>
       </CardHeader>

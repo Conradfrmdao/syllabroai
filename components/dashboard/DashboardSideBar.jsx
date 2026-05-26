@@ -39,7 +39,7 @@ export default function DashboardSidebar() {
 
   return (
     <aside className="w-64 border-r p-6">
-      <h2 className="mb-6 text-xl font-bold">AI Examiner</h2>
+      <h2 className="mb-6 text-xl font-bold">Syllabro Ai</h2>
 
       <nav className="flex flex-col gap-2">
         {navItems.map((item) => {
