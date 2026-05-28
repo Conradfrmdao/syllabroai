@@ -1,10 +1,10 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
+import {auth } from "@clerk/nextjs/server"; 
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { coursesTable } from "@/db/schema";
-import { desc } from "drizzle-orm";
+import { eq ,desc } from "drizzle-orm";
 
 import {
   Card,
@@ -14,18 +14,44 @@ import {
 } from "@/components/ui/card";
 
 export default async function CoursesPage() {
-  const coursesList = await db
-    .select()
-    .from(coursesTable)
-    .orderBy(desc(coursesTable.createdAt));
+  let coursesList = [];
+  let errorMessage = "";
+
+  const { userId } = await auth();
+  if (!userId) {
+    return <div>You must be signed in to view courses.</div>;
+  }
+  try {
+    coursesList = await db
+      .select()
+      .from(coursesTable)
+      .where(eq(coursesTable.userId, userId))
+      .orderBy(desc(coursesTable.createdAt));
+  } catch (error) {
+    console.warn("Failed to fetch courses:", error?.message ?? error);
+    errorMessage =
+      "Database connection is temporarily unavailable. Please refresh in a moment.";
+  }
 
   let content;
 
-  if (coursesList.length === 0) {
-    content = <p>No courses created yet.</p>;
+  if (errorMessage) {
+    content = (
+      <p className="rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
+        {errorMessage}
+      </p>
+    );
   }
 
-  if (coursesList.length > 0) {
+  if (!errorMessage && coursesList.length === 0) {
+    content = (
+      <p className="rounded-2xl border border-white/8 bg-white/[0.04] px-5 py-4 text-white/62">
+        No courses created yet.
+      </p>
+    );
+  }
+
+  if (!errorMessage && coursesList.length > 0) {
     content = (
       <div className="space-y-4">
         {coursesList.map((course) => {
@@ -62,7 +88,15 @@ export default async function CoursesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Your Courses</h1>
+      <div className="space-y-2">
+        <h1 className="text-3xl font-semibold tracking-tight text-white">
+          Your Courses
+        </h1>
+        <p className="text-white/58">
+          Browse every course you have generated and jump back into the next
+          learning session quickly.
+        </p>
+      </div>
       {content}
     </div>
   );
