@@ -14,7 +14,7 @@ export default async function DashboardTopbar() {
   }
 
   return (
-    <header className="px-4 pt-4 sm:px-6 sm:pt-6 lg:px-8">
+    <header className="w-full px-4 pt-4 sm:px-6 sm:pt-6 lg:px-8">
       <div className="glass-panel flex w-full flex-col gap-4 rounded-[1.75rem] px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div className="space-y-2">
           <Badge variant="secondary" className="w-fit">
