@@ -15,7 +15,7 @@ export default function DashboardShell({ children }) {
           <DashboardTopbar />
 
           <main className="flex-1 px-4 pb-6 pt-2 sm:px-6 lg:px-8 lg:pb-8">
-            <div className="mx-auto w-full max-w-6xl">{children}</div>
+            <div className="w-full">{children}</div>
           </main>
         </div>
       </div>
