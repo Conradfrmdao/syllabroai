@@ -1,10 +1,11 @@
 "use server";
 
-import { coursesTable } from "@/db/schema";
+import { coursesTable, generationJobsTable } from "@/db/schema";
 import { db } from "@/lib/db";
 import { and, count, eq, gte } from "drizzle-orm";
 import { getOrCreateCurrentUser } from "@/lib/current-user";
 import { inngest } from "@/inngest/client";
+import { markGenerationJobFailed } from "@/lib/generation-jobs";
 
 export async function createCourse(prevState, formData) {
   const title = formData.get("title");
@@ -57,6 +58,7 @@ export async function createCourse(prevState, formData) {
   weekStart.setDate(weekStart.getDate() - 7);
 
   let createdCourseId = null;
+  let generationJobId = null;
 
   try {
     const courseCountResult = await db
@@ -108,11 +110,31 @@ export async function createCourse(prevState, formData) {
 
     createdCourseId = newCourse.id;
 
+    const insertedJobs = await db
+      .insert(generationJobsTable)
+      .values({
+        userId: userId,
+        courseId: createdCourseId,
+        jobType: "course",
+        status: "generating",
+        targetId: createdCourseId,
+        message: "Course generation started.",
+      })
+      .returning({
+        id: generationJobsTable.id,
+      });
+
+    const generationJob = insertedJobs[0];
+
+    if (generationJob) {
+      generationJobId = generationJob.id;
+    }
 
     await inngest.send({
       name: "course/generate.requested",
       data: {
         courseId: createdCourseId,
+        jobId: generationJobId,
         userId: userId,
         title: cleanTitle,
         description: cleanDescription,
@@ -120,6 +142,17 @@ export async function createCourse(prevState, formData) {
     });
   } catch (error) {
     console.error("Failed to create course:", error);
+
+    if (generationJobId) {
+      try {
+        await markGenerationJobFailed(
+          generationJobId,
+          "Course generation could not be started."
+        );
+      } catch (jobError) {
+        console.error("Failed to mark course job as failed:", jobError);
+      }
+    }
 
     return {
       success: false,
@@ -129,7 +162,7 @@ export async function createCourse(prevState, formData) {
 
   return {
     success: true,
-    message: "Course and sample chapters created successfully.",
+    message: "Course generation started.",
     courseId: createdCourseId,
   };
 }

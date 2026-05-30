@@ -117,6 +117,28 @@ export const examsTable = pgTable("exams", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const generationJobsTable = pgTable("generation_jobs", {
+  id: serial("id").primaryKey(),
+
+  userId: varchar("user_id", { length: 255 }).notNull(),
+
+  courseId: integer("course_id")
+    .notNull()
+    .references(() => coursesTable.id, { onDelete: "cascade" }),
+
+  jobType: varchar("job_type", { length: 50 }).notNull(),
+
+  status: varchar("status", { length: 50 }).notNull().default("generating"),
+
+  targetId: integer("target_id"),
+
+  message: text("message").notNull().default(""),
+
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
 

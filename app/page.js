@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowRight,
   BrainCircuit,
@@ -205,8 +206,21 @@ export default function HomePage() {
     <main className="app-shell-bg relative min-h-screen text-white">
       <header className="sticky top-0 z-50 border-b border-white/8 bg-black/70 backdrop-blur-2xl">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-4 sm:px-8 lg:px-10">
-          <Link href="/" className="text-lg font-semibold tracking-[-0.03em] text-white">
-            SyllabroAI
+          <Link
+            href="/"
+            className="inline-flex items-center gap-3 text-lg font-semibold tracking-[-0.03em] text-white"
+          >
+            <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl border border-white/12 bg-white">
+              <Image
+                src="/syllabro-icon.png"
+                alt="SyllabroAI logo"
+                width={32}
+                height={32}
+                className="h-8 w-8 object-contain"
+                priority
+              />
+            </span>
+            <span>SyllabroAI</span>
           </Link>
 
           <nav className="hidden items-center gap-8 md:flex">

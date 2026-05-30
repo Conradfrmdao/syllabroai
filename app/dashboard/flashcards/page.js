@@ -9,8 +9,9 @@ import { ArrowRight, BrainCircuit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { coursesTable, flashcardsTable } from "@/db/schema";
+import { coursesTable, flashcardsTable, generationJobsTable } from "@/db/schema";
 import { db } from "@/lib/db";
+import { safelyMarkStaleGenerationJobs } from "@/lib/generation-jobs";
 
 function formatDate(date) {
   if (!date) {
@@ -54,10 +55,24 @@ export default async function FlashcardsPage() {
     return <div>You must be signed in to view flashcards.</div>;
   }
 
+  await safelyMarkStaleGenerationJobs();
+
   let groupedCourses = [];
+  let activeFlashcardJobs = [];
   let errorMessage = "";
 
   try {
+    activeFlashcardJobs = await db
+      .select()
+      .from(generationJobsTable)
+      .where(
+        and(
+          eq(generationJobsTable.userId, userId),
+          eq(generationJobsTable.jobType, "flashcards"),
+          eq(generationJobsTable.status, "generating")
+        )
+      );
+
     const rows = await db
       .select({
         courseId: flashcardsTable.courseId,
@@ -91,7 +106,11 @@ export default async function FlashcardsPage() {
     );
   }
 
-  if (!errorMessage && groupedCourses.length === 0) {
+  if (
+    !errorMessage &&
+    groupedCourses.length === 0 &&
+    activeFlashcardJobs.length === 0
+  ) {
     content = (
       <Card className="glass-panel-strong rounded-[2rem]">
         <CardContent className="p-6 sm:p-8">
@@ -120,9 +139,32 @@ export default async function FlashcardsPage() {
     );
   }
 
-  if (!errorMessage && groupedCourses.length > 0) {
+  if (
+    !errorMessage &&
+    (groupedCourses.length > 0 || activeFlashcardJobs.length > 0)
+  ) {
     content = (
       <div className="grid gap-4 lg:grid-cols-2">
+        {activeFlashcardJobs.map((job) => (
+          <Card key={job.id} className="glass-panel-strong rounded-[2rem]">
+            <CardHeader className="space-y-3 border-b border-white/8 pb-5">
+              <Badge variant="outline" className="w-fit">
+                Generating
+              </Badge>
+              <CardTitle className="text-2xl">
+                Flashcards are being generated
+              </CardTitle>
+            </CardHeader>
+
+            <CardContent className="p-6">
+              <p className="text-sm leading-7 text-white/58">
+                Refresh in a moment. If generation takes too long, SyllabroAI
+                will mark it as failed instead of leaving it stuck forever.
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+
         {groupedCourses.map((course) => (
           <Card
             key={course.courseId}

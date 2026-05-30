@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { safelyMarkStaleGenerationJobs } from "@/lib/generation-jobs";
 
 export default async function CoursesPage() {
   let coursesList = [];
@@ -21,6 +22,9 @@ export default async function CoursesPage() {
   if (!userId) {
     return <div>You must be signed in to view courses.</div>;
   }
+
+  await safelyMarkStaleGenerationJobs();
+
   try {
     coursesList = await db
       .select()

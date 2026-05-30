@@ -2,10 +2,16 @@
 
 import { asc, and, eq } from "drizzle-orm";
 
-import { chaptersTable, coursesTable, examsTable } from "@/db/schema";
+import {
+  chaptersTable,
+  coursesTable,
+  examsTable,
+  generationJobsTable,
+} from "@/db/schema";
 import { inngest } from "@/inngest/client";
 import { db } from "@/lib/db";
 import { getOrCreateCurrentUser } from "@/lib/current-user";
+import { markGenerationJobFailed } from "@/lib/generation-jobs";
 
 function buildChapterPayload(chapters) {
   return chapters.map((chapter) => {
@@ -38,6 +44,7 @@ export async function generateExamForCourse(courseId) {
 
   const userId = appUser.clerkUserId;
   let examId = null;
+  let generationJobId = null;
 
   try {
     const courseResult = await db
@@ -98,10 +105,31 @@ export async function generateExamForCourse(courseId) {
 
     examId = exam.id;
 
+    const insertedJobs = await db
+      .insert(generationJobsTable)
+      .values({
+        userId: userId,
+        courseId: cleanCourseId,
+        jobType: "exam",
+        status: "generating",
+        targetId: examId,
+        message: "Exam generation started.",
+      })
+      .returning({
+        id: generationJobsTable.id,
+      });
+
+    const generationJob = insertedJobs[0];
+
+    if (generationJob) {
+      generationJobId = generationJob.id;
+    }
+
     await inngest.send({
       name: "exam/generate.requested",
       data: {
         examId: examId,
+        jobId: generationJobId,
         courseId: cleanCourseId,
         userId: userId,
         courseTitle: course.title,
@@ -126,6 +154,17 @@ export async function generateExamForCourse(courseId) {
           );
       } catch (updateError) {
         console.error("Failed to mark exam as failed:", updateError);
+      }
+    }
+
+    if (generationJobId) {
+      try {
+        await markGenerationJobFailed(
+          generationJobId,
+          "Exam generation could not be started."
+        );
+      } catch (jobError) {
+        console.error("Failed to mark exam job as failed:", jobError);
       }
     }
 

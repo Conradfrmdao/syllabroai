@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { examsTable } from "@/db/schema";
 import { db } from "@/lib/db";
+import { safelyMarkStaleGenerationJobs } from "@/lib/generation-jobs";
 
 function StatusContent({ status }) {
   if (status === "generating") {
@@ -53,6 +54,8 @@ export default async function ExamDetailsPage({ params }) {
   if (!userId) {
     return <div>You must be signed in to view this exam.</div>;
   }
+
+  await safelyMarkStaleGenerationJobs();
 
   let exam = null;
   let errorMessage = "";

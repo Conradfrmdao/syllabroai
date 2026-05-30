@@ -11,6 +11,10 @@ import {
 import { and, eq } from "drizzle-orm";
 import { gemini } from "@/lib/gemini";
 import { parseAiJson } from "@/lib/ai-json";
+import {
+  markGenerationJobCompleted,
+  markGenerationJobFailed,
+} from "@/lib/generation-jobs";
 
 function getChapterSourceText(chapters) {
   if (!Array.isArray(chapters)) {
@@ -195,22 +199,25 @@ export const testCourseGeneration = inngest.createFunction(
   },
   async ({ event, step }) => {
     const courseId = event.data.courseId;
+    const jobId = event.data.jobId;
+    const userId = event.data.userId;
     const title = event.data.title;
     const description = event.data.description;
 
-    await step.run("mark-course-generating", async () => {
-      await db
-        .update(coursesTable)
-        .set({
-          status: "generating",
-        })
-        .where(eq(coursesTable.id, courseId));
-    });
+    try {
+      await step.run("mark-course-generating", async () => {
+        await db
+          .update(coursesTable)
+          .set({
+            status: "generating",
+          })
+          .where(eq(coursesTable.id, courseId));
+      });
 
-    const chapters = await step.run("generate-ai-chapters", async () => {
-      const response = await gemini.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: `
+      const chapters = await step.run("generate-ai-chapters", async () => {
+        const response = await gemini.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: `
                     You are SyllabroAI, an elite AI course architect and expert teacher.
 
                     Your job is to create a complete beginner-to-advanced mini-course that is clearer, deeper, and more practical than ordinary free tutorial websites.
@@ -308,65 +315,82 @@ export const testCourseGeneration = inngest.createFunction(
                       }
                     ]
                     `,
-            });
+        });
 
-      const rawText = response.text;
+        const parsedChapters = parseAiJson(response.text);
 
-      let cleanedText = rawText.trim();
-
-      if (cleanedText.startsWith("```json")) {
-        cleanedText = cleanedText.replace("```json", "");
-      }
-
-      if (cleanedText.startsWith("```")) {
-        cleanedText = cleanedText.replace("```", "");
-      }
-
-      if (cleanedText.endsWith("```")) {
-        cleanedText = cleanedText.slice(0, -3);
-      }
-
-      const parsedChapters = JSON.parse(cleanedText);
-
-      if (!Array.isArray(parsedChapters)) {
-        throw new Error("Gemini did not return an array.");
-      }
-
-      return parsedChapters;
-    });
-
-    await step.run("save-ai-chapters", async () => {
-      const chapterRows = chapters.map((chapter, index) => {
-        let chapterOrder = chapter.chapter_order;
-
-        if (!chapterOrder) {
-          chapterOrder = index + 1;
+        if (!Array.isArray(parsedChapters)) {
+          throw new Error("Gemini did not return an array.");
         }
 
-        return {
-          courseId: courseId,
-          title: chapter.title,
-          content: chapter.content,
-          chapter_order: chapterOrder,
-        };
+        return parsedChapters;
       });
 
-      await db.insert(chaptersTable).values(chapterRows);
-    });
+      await step.run("save-ai-chapters", async () => {
+        const chapterRows = chapters.map((chapter, index) => {
+          let chapterOrder = chapter.chapter_order;
 
-    await step.run("mark-course-completed", async () => {
-      await db
-        .update(coursesTable)
-        .set({
-          status: "completed",
-        })
-        .where(eq(coursesTable.id, courseId));
-    });
+          if (!chapterOrder) {
+            chapterOrder = index + 1;
+          }
 
-    return {
-      success: true,
-      message: "AI course generation completed.",
-    };
+          return {
+            courseId: courseId,
+            title: chapter.title,
+            content: chapter.content,
+            chapter_order: chapterOrder,
+          };
+        });
+
+        await db.insert(chaptersTable).values(chapterRows);
+      });
+
+      await step.run("mark-course-completed", async () => {
+        await db
+          .update(coursesTable)
+          .set({
+            status: "completed",
+          })
+          .where(eq(coursesTable.id, courseId));
+      });
+
+      await step.run("mark-course-job-completed", async () => {
+        await markGenerationJobCompleted(
+          jobId,
+          "Course generation completed."
+        );
+      });
+
+      return {
+        success: true,
+        message: "AI course generation completed.",
+      };
+    } catch (error) {
+      console.error("Course generation failed:", error);
+
+      await step.run("mark-course-failed", async () => {
+        await db
+          .update(coursesTable)
+          .set({
+            status: "failed",
+          })
+          .where(
+            and(
+              eq(coursesTable.id, courseId),
+              eq(coursesTable.userId, userId)
+            )
+          );
+      });
+
+      await step.run("mark-course-job-failed", async () => {
+        await markGenerationJobFailed(jobId, "Course generation failed.");
+      });
+
+      return {
+        success: false,
+        message: "AI course generation failed.",
+      };
+    }
   }
 );
 
@@ -379,6 +403,7 @@ export const generateQuiz = inngest.createFunction(
   },
   async ({ event, step }) => {
     const quizId = event.data.quizId;
+    const jobId = event.data.jobId;
     const courseId = event.data.courseId;
     const userId = event.data.userId;
     const courseTitle = event.data.courseTitle;
@@ -465,6 +490,10 @@ export const generateQuiz = inngest.createFunction(
           );
       });
 
+      await step.run("mark-quiz-job-completed", async () => {
+        await markGenerationJobCompleted(jobId, "Quiz generation completed.");
+      });
+
       return {
         success: true,
         message: "Quiz generation completed.",
@@ -486,6 +515,10 @@ export const generateQuiz = inngest.createFunction(
           );
       });
 
+      await step.run("mark-quiz-job-failed", async () => {
+        await markGenerationJobFailed(jobId, "Quiz generation failed.");
+      });
+
       return {
         success: false,
         message: "Quiz generation failed.",
@@ -502,6 +535,7 @@ export const generateFlashcards = inngest.createFunction(
     },
   },
   async ({ event, step }) => {
+    const jobId = event.data.jobId;
     const courseId = event.data.courseId;
     const userId = event.data.userId;
     const courseTitle = event.data.courseTitle;
@@ -568,12 +602,26 @@ export const generateFlashcards = inngest.createFunction(
         await db.insert(flashcardsTable).values(flashcardRows);
       });
 
+      await step.run("mark-flashcards-job-completed", async () => {
+        await markGenerationJobCompleted(
+          jobId,
+          "Flashcard generation completed."
+        );
+      });
+
       return {
         success: true,
         message: "Flashcard generation completed.",
       };
     } catch (error) {
       console.error("Flashcard generation failed:", error);
+
+      await step.run("mark-flashcards-job-failed", async () => {
+        await markGenerationJobFailed(
+          jobId,
+          "Flashcard generation failed."
+        );
+      });
 
       return {
         success: false,
@@ -592,6 +640,7 @@ export const generateExam = inngest.createFunction(
   },
   async ({ event, step }) => {
     const examId = event.data.examId;
+    const jobId = event.data.jobId;
     const userId = event.data.userId;
     const courseTitle = event.data.courseTitle;
     const chapters = event.data.chapters;
@@ -669,6 +718,10 @@ export const generateExam = inngest.createFunction(
           );
       });
 
+      await step.run("mark-exam-job-completed", async () => {
+        await markGenerationJobCompleted(jobId, "Exam generation completed.");
+      });
+
       return {
         success: true,
         message: "Exam generation completed.",
@@ -688,6 +741,10 @@ export const generateExam = inngest.createFunction(
               eq(examsTable.userId, userId)
             )
           );
+      });
+
+      await step.run("mark-exam-job-failed", async () => {
+        await markGenerationJobFailed(jobId, "Exam generation failed.");
       });
 
       return {

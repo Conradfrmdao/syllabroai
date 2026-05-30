@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   BookOpenText,
@@ -60,8 +61,14 @@ export default function DashboardSidebar() {
       <div className="flex h-full flex-col gap-6 p-4 sm:p-5 lg:p-6">
         <div className="glass-panel rounded-[1.75rem] p-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/12 bg-white text-base font-semibold text-black shadow-[0_14px_30px_-18px_rgba(255,255,255,0.24)]">
-              S
+            <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl border border-white/12 bg-white shadow-[0_14px_30px_-18px_rgba(255,255,255,0.24)]">
+              <Image
+                src="/syllabro-icon.png"
+                alt="SyllabroAI logo"
+                width={40}
+                height={40}
+                className="h-10 w-10 object-contain"
+              />
             </div>
 
             <div>

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/card";
 import { coursesTable } from "@/db/schema";
 import { db } from "@/lib/db";
+import { safelyMarkStaleGenerationJobs } from "@/lib/generation-jobs";
 
 function formatDate(date) {
   if (!date) {
@@ -41,6 +42,8 @@ export default async function CourseDetailsPage({ params }) {
   if (!userId) {
     return <div>Please log in to view course details</div>;
   }
+
+  await safelyMarkStaleGenerationJobs();
 
   let course = null;
   let errorMessage = "";

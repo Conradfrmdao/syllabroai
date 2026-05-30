@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { quizQuestionsTable, quizzesTable } from "@/db/schema";
 import { db } from "@/lib/db";
+import { safelyMarkStaleGenerationJobs } from "@/lib/generation-jobs";
 
 function getOptions(question) {
   return [
@@ -74,6 +75,8 @@ export default async function QuizDetailsPage({ params }) {
   if (!userId) {
     return <div>You must be signed in to view this quiz.</div>;
   }
+
+  await safelyMarkStaleGenerationJobs();
 
   let quiz = null;
   let questions = [];

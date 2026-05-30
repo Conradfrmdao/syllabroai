@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { quizzesTable } from "@/db/schema";
 import { db } from "@/lib/db";
+import { safelyMarkStaleGenerationJobs } from "@/lib/generation-jobs";
 
 function formatDate(date) {
   if (!date) {
@@ -43,6 +44,8 @@ export default async function QuizzesPage() {
   if (!userId) {
     return <div>You must be signed in to view quizzes.</div>;
   }
+
+  await safelyMarkStaleGenerationJobs();
 
   let quizzes = [];
   let errorMessage = "";

@@ -2,10 +2,16 @@
 
 import { asc, and, eq } from "drizzle-orm";
 
-import { chaptersTable, coursesTable, quizzesTable } from "@/db/schema";
+import {
+  chaptersTable,
+  coursesTable,
+  generationJobsTable,
+  quizzesTable,
+} from "@/db/schema";
 import { inngest } from "@/inngest/client";
 import { db } from "@/lib/db";
 import { getOrCreateCurrentUser } from "@/lib/current-user";
+import { markGenerationJobFailed } from "@/lib/generation-jobs";
 
 function buildChapterPayload(chapters) {
   return chapters.map((chapter) => {
@@ -38,6 +44,7 @@ export async function generateQuizForCourse(courseId) {
 
   const userId = appUser.clerkUserId;
   let quizId = null;
+  let generationJobId = null;
 
   try {
     const courseResult = await db
@@ -96,10 +103,31 @@ export async function generateQuizForCourse(courseId) {
 
     quizId = quiz.id;
 
+    const insertedJobs = await db
+      .insert(generationJobsTable)
+      .values({
+        userId: userId,
+        courseId: cleanCourseId,
+        jobType: "quiz",
+        status: "generating",
+        targetId: quizId,
+        message: "Quiz generation started.",
+      })
+      .returning({
+        id: generationJobsTable.id,
+      });
+
+    const generationJob = insertedJobs[0];
+
+    if (generationJob) {
+      generationJobId = generationJob.id;
+    }
+
     await inngest.send({
       name: "quiz/generate.requested",
       data: {
         quizId: quizId,
+        jobId: generationJobId,
         courseId: cleanCourseId,
         userId: userId,
         courseTitle: course.title,
@@ -124,6 +152,17 @@ export async function generateQuizForCourse(courseId) {
           );
       } catch (updateError) {
         console.error("Failed to mark quiz as failed:", updateError);
+      }
+    }
+
+    if (generationJobId) {
+      try {
+        await markGenerationJobFailed(
+          generationJobId,
+          "Quiz generation could not be started."
+        );
+      } catch (jobError) {
+        console.error("Failed to mark quiz job as failed:", jobError);
       }
     }
 

@@ -10,8 +10,9 @@ import FlashcardStudyClient from "@/components/learning/FlashcardStudyClient";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { coursesTable, flashcardsTable } from "@/db/schema";
+import { coursesTable, flashcardsTable, generationJobsTable } from "@/db/schema";
 import { db } from "@/lib/db";
+import { safelyMarkStaleGenerationJobs } from "@/lib/generation-jobs";
 
 export default async function FlashcardStudyPage({ params }) {
   const resolvedParams = await params;
@@ -27,8 +28,11 @@ export default async function FlashcardStudyPage({ params }) {
     return <div>You must be signed in to view flashcards.</div>;
   }
 
+  await safelyMarkStaleGenerationJobs();
+
   let course = null;
   let flashcards = [];
+  let activeJob = null;
   let errorMessage = "";
 
   try {
@@ -46,6 +50,21 @@ export default async function FlashcardStudyPage({ params }) {
     course = courseResult[0];
 
     if (course) {
+      const activeJobs = await db
+        .select()
+        .from(generationJobsTable)
+        .where(
+          and(
+            eq(generationJobsTable.courseId, courseId),
+            eq(generationJobsTable.userId, userId),
+            eq(generationJobsTable.jobType, "flashcards"),
+            eq(generationJobsTable.status, "generating")
+          )
+        )
+        .limit(1);
+
+      activeJob = activeJobs[0];
+
       flashcards = await db
         .select()
         .from(flashcardsTable)
@@ -77,7 +96,20 @@ export default async function FlashcardStudyPage({ params }) {
 
   let content;
 
-  if (flashcards.length === 0) {
+  if (activeJob) {
+    content = (
+      <Card className="glass-panel-strong rounded-[2rem]">
+        <CardContent className="p-6 sm:p-8">
+          <p className="text-sm leading-7 text-white/62">
+            Flashcards are still generating. Refresh in a moment. If generation
+            takes too long, SyllabroAI will mark it as failed automatically.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!activeJob && flashcards.length === 0) {
     content = (
       <Card className="glass-panel-strong rounded-[2rem]">
         <CardContent className="p-6 sm:p-8">
@@ -90,7 +122,7 @@ export default async function FlashcardStudyPage({ params }) {
     );
   }
 
-  if (flashcards.length > 0) {
+  if (!activeJob && flashcards.length > 0) {
     content = <FlashcardStudyClient flashcards={flashcards} />;
   }
 
