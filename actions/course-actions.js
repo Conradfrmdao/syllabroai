@@ -166,3 +166,57 @@ export async function createCourse(prevState, formData) {
     courseId: createdCourseId,
   };
 }
+
+export async function deleteCourseAction(prevState, formData) {
+  const courseId = formData.get("courseId");
+  const cleanCourseId = Number(courseId);
+
+  if (Number.isNaN(cleanCourseId)) {
+    return {
+      success: false,
+      message: "Invalid course ID.",
+    };
+  }
+
+  const appUser = await getOrCreateCurrentUser();
+
+  if (!appUser) {
+    return {
+      success: false,
+      message: "You must be signed in to delete a course.",
+    };
+  }
+
+  try {
+    const deletedCourses = await db
+      .delete(coursesTable)
+      .where(
+        and(
+          eq(coursesTable.id, cleanCourseId),
+          eq(coursesTable.userId, appUser.clerkUserId)
+        )
+      )
+      .returning({
+        id: coursesTable.id,
+      });
+
+    if (deletedCourses.length === 0) {
+      return {
+        success: false,
+        message: "Course not found.",
+      };
+    }
+  } catch (error) {
+    console.error("Failed to delete course:", error);
+
+    return {
+      success: false,
+      message: "Failed to delete course. Please try again.",
+    };
+  }
+
+  return {
+    success: true,
+    message: "Course deleted.",
+  };
+}

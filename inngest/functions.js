@@ -220,7 +220,7 @@ export const testCourseGeneration = inngest.createFunction(
           contents: `
                     You are SyllabroAI, an elite AI course architect and expert teacher.
 
-                    Your job is to create a complete beginner-to-advanced mini-course that is clearer, deeper, and more practical than ordinary free tutorial websites.
+                    Your job is to create a complete beginner-to-advanced course that is clearer, deeper, and more practical than ordinary free tutorial websites.
 
                     Course title:
                     ${title}
@@ -228,7 +228,10 @@ export const testCourseGeneration = inngest.createFunction(
                     Course description:
                     ${description}
 
-                    Create exactly 5 chapters.
+                    Create the right number of chapters for the course scope.
+                    Use 6 to 12 chapters.
+                    If the topic is broad, advanced, professional, or the user asks for depth, use 9 to 12 chapters.
+                    If the topic is narrow, use 6 to 8 chapters.
 
                     Return ONLY valid JSON.
                     Do not include markdown fences.
@@ -254,6 +257,7 @@ export const testCourseGeneration = inngest.createFunction(
 
                     Rules for content:
                     Each chapter content must be a well-structured learning note.
+                    Each chapter must be detailed enough for serious study, not a short summary.
                     Each chapter must include these sections in this exact order:
 
                     1. Overview
@@ -267,6 +271,7 @@ export const testCourseGeneration = inngest.createFunction(
                     Use beginner-friendly language.
                     Do not be shallow.
                     Use analogies where useful.
+                    Include enough detail that a learner can study without immediately needing another source.
 
                     4. Step-by-Step Explanation
                     Break the topic into ordered steps.
@@ -286,11 +291,11 @@ export const testCourseGeneration = inngest.createFunction(
                     Explain where this chapter is used in real life or professional work.
 
                     8. Practice Tasks
-                    Give 3 to 5 exercises.
+                    Give 4 to 7 exercises.
                     Start easy, then increase difficulty.
 
                     9. Quick Self-Test
-                    Give 3 short questions the learner can answer to check understanding.
+                    Give 4 to 6 short questions the learner can answer to check understanding.
 
                     10. Summary
                     Summarize the chapter clearly.
@@ -660,7 +665,8 @@ export const generateExam = inngest.createFunction(
             Course chapters:
             ${chapterSourceText}
 
-            Create a structured exam for this course.
+            Create a serious structured exam for this course.
+            The exam should feel useful for real revision, not like a short worksheet.
 
             Return ONLY valid JSON.
             Do not include markdown fences.
@@ -674,21 +680,27 @@ export const generateExam = inngest.createFunction(
             - Instructions
             - Suggested time
             - Total marks
-            - Section A: Multiple Choice
-            - Section B: Short Answer
-            - Section C: Practical/Application Questions
-            - Section D: Advanced Challenge
+            - Section A: Multiple Choice with 10 questions
+            - Section B: Short Answer with 6 questions
+            - Section C: Practical/Application Questions with 4 questions
+            - Section D: Advanced Challenge with 2 deeper questions
 
             The marking guide must include:
             - correct answers
             - expected points
             - explanations
             - grading notes
+            - common mistakes to watch for
 
             Quality rules:
             - Make the exam serious and structured.
             - Test understanding, application, and reasoning.
             - Make the marking guide useful for self-study.
+            - Use the course chapters as the source of truth.
+            - Include beginner, intermediate, and advanced coverage.
+            - For programming exams, include code-reading and code-writing questions.
+            - For math exams, include worked marking steps and final answers.
+            - For business or theory exams, include scenario-based questions.
 
             JSON example:
             {

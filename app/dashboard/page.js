@@ -34,13 +34,13 @@ function getTotal(result) {
 
 function MetricCard({ label, value, detail, featured = false }) {
   let cardClassName =
-    "quiet-card relative overflow-hidden rounded-[2rem]";
+    "relative overflow-hidden rounded-[2rem] border border-white/14 bg-[linear-gradient(135deg,rgba(255,255,255,0.09),rgba(255,255,255,0.025)_45%,rgba(0,0,0,0.22))] shadow-[0_26px_80px_-54px_rgba(255,255,255,0.22)]";
   let valueClassName = "text-3xl font-semibold tracking-tight text-white";
   let detailClassName = "text-xs leading-5 text-white/42";
 
   if (featured) {
     cardClassName =
-      "quiet-card dot-matrix relative overflow-hidden rounded-[2rem] md:col-span-2 xl:col-span-4";
+      "dot-matrix relative overflow-hidden rounded-[2rem] border border-white/16 bg-[linear-gradient(135deg,rgba(14,165,233,0.13),rgba(255,255,255,0.055)_34%,rgba(0,0,0,0.28))] shadow-[0_30px_100px_-58px_rgba(56,189,248,0.45)] md:col-span-2 xl:col-span-4";
     valueClassName = "text-5xl font-semibold tracking-tight text-white sm:text-6xl";
     detailClassName = "text-sm leading-6 text-white/50";
   }

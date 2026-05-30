@@ -4,11 +4,12 @@ export const dynamic = "force-dynamic";
 import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
 import { desc, eq } from "drizzle-orm";
-import { ArrowRight, FileQuestion } from "lucide-react";
+import { ArrowRight, FileQuestion, Plus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import AutoRefreshWhenGenerating from "@/components/realtime/AutoRefreshWhenGenerating";
 import { quizzesTable } from "@/db/schema";
 import { db } from "@/lib/db";
 import { safelyMarkStaleGenerationJobs } from "@/lib/generation-jobs";
@@ -90,8 +91,8 @@ export default async function QuizzesPage() {
 
               <div className="flex flex-col gap-3 sm:flex-row">
                 <Button asChild size="lg">
-                  <Link href="/dashboard/courses">
-                    View Courses
+                  <Link href="/dashboard/courses?generate=quiz">
+                    Choose Course
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
@@ -132,25 +133,43 @@ export default async function QuizzesPage() {
     );
   }
 
+  let hasGeneratingQuiz = false;
+
+  for (const quiz of quizzes) {
+    if (quiz.status === "generating") {
+      hasGeneratingQuiz = true;
+    }
+  }
+
   return (
     <div className="w-full space-y-6">
-      <div className="space-y-3">
-        <Badge variant="secondary" className="w-fit">
-          <FileQuestion className="h-3.5 w-3.5" />
-          Quizzes
-        </Badge>
-
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+          <Badge variant="secondary" className="w-fit">
+            <FileQuestion className="h-3.5 w-3.5" />
             Quizzes
-          </h1>
-          <p className="max-w-2xl text-sm leading-7 text-white/58 sm:text-base">
-            Generate quizzes from your saved courses to test understanding.
-          </p>
+          </Badge>
+
+          <div className="space-y-2">
+            <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+              Quizzes
+            </h1>
+            <p className="max-w-2xl text-sm leading-7 text-white/58 sm:text-base">
+              Generate quizzes from your saved courses to test understanding.
+            </p>
+          </div>
         </div>
+
+        <Button asChild>
+          <Link href="/dashboard/courses?generate=quiz">
+            <Plus className="h-4 w-4" />
+            Create Quiz
+          </Link>
+        </Button>
       </div>
 
       {content}
+      <AutoRefreshWhenGenerating enabled={hasGeneratingQuiz} />
     </div>
   );
 }

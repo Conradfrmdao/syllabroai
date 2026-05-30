@@ -85,12 +85,12 @@ export default function CreateCourseForm() {
     }
 
     if (reset) {
-      textarea.style.height = "84px";
+      textarea.style.height = "132px";
       return;
     }
 
-    textarea.style.height = "84px";
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 140)}px`;
+    textarea.style.height = "132px";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 260)}px`;
   }, []);
 
   useEffect(() => {
@@ -123,11 +123,11 @@ export default function CreateCourseForm() {
 
         <div className="space-y-2">
           <CardTitle className="text-lg sm:text-xl">
-            Create a structured course from a single prompt
+            Create a detailed course from a serious learning brief
           </CardTitle>
           <CardDescription className="max-w-2xl text-xs leading-5 text-white/54 sm:text-sm">
-            Add a direct title, then describe the learner level, scope, and
-            expected outcome.
+            Add the target level, expected outcome, preferred depth, and any
+            chapter count guidance. Broad topics can generate longer courses.
           </CardDescription>
         </div>
       </CardHeader>
@@ -155,10 +155,12 @@ export default function CreateCourseForm() {
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-medium text-white">Course prompt</p>
+                <p className="text-sm font-medium text-white">
+                  Detailed course prompt
+                </p>
                 <p className="text-xs text-white/42">
-                  Describe what the learner should achieve and how the course
-                  should feel.
+                  Include topic scope, learner level, target outcome, pace, and
+                  whether you want a longer chapter flow.
                 </p>
               </div>
             </div>
@@ -178,9 +180,9 @@ export default function CreateCourseForm() {
                 onChange={(event) => setDescription(event.target.value)}
                 onFocus={() => setIsComposerFocused(true)}
                 onBlur={() => setIsComposerFocused(false)}
-                placeholder="Example: Create an intermediate course for aspiring product designers who want to master interviews. Include a weekly structure, mock questions, mini quizzes, and flashcards for fast revision."
+                placeholder="Example: Create a complete beginner-to-advanced Python course with 10 to 12 chapters. Include deep explanations, practical coding examples, common mistakes, projects, revision tasks, quizzes, flashcards, and an exam-style final section."
                 required
-                className="min-h-[84px] resize-none border-0 bg-transparent px-1 py-1 text-sm leading-6 shadow-none ring-0 focus-visible:border-transparent focus-visible:ring-0"
+                className="min-h-[132px] resize-none border-0 bg-transparent px-1 py-1 text-sm leading-6 shadow-none ring-0 focus-visible:border-transparent focus-visible:ring-0"
               />
 
               <div className="mt-2 flex flex-wrap gap-2">

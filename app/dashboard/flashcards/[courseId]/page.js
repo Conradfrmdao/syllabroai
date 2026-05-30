@@ -12,7 +12,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { coursesTable, flashcardsTable, generationJobsTable } from "@/db/schema";
 import { db } from "@/lib/db";
-import { safelyMarkStaleGenerationJobs } from "@/lib/generation-jobs";
+import {
+  markGenerationJobCompleted,
+  safelyMarkStaleGenerationJobs,
+} from "@/lib/generation-jobs";
+import AutoRefreshWhenGenerating from "@/components/realtime/AutoRefreshWhenGenerating";
 
 export default async function FlashcardStudyPage({ params }) {
   const resolvedParams = await params;
@@ -75,6 +79,14 @@ export default async function FlashcardStudyPage({ params }) {
           )
         )
         .orderBy(asc(flashcardsTable.flashcard_order));
+
+      if (activeJob && flashcards.length > 0) {
+        await markGenerationJobCompleted(
+          activeJob.id,
+          "Flashcards are ready."
+        );
+        activeJob = null;
+      }
     }
   } catch (error) {
     console.warn("Failed to fetch flashcards:", error?.message ?? error);
@@ -145,6 +157,7 @@ export default async function FlashcardStudyPage({ params }) {
       </div>
 
       {content}
+      <AutoRefreshWhenGenerating enabled={Boolean(activeJob)} />
 
       <Button asChild variant="ghost" className="rounded-full">
         <Link href="/dashboard/flashcards">

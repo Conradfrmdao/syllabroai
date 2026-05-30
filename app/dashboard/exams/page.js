@@ -3,15 +3,64 @@ export const dynamic = "force-dynamic";
 
 import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
-import { desc, eq } from "drizzle-orm";
-import { ArrowRight, GraduationCap } from "lucide-react";
+import { and, desc, eq } from "drizzle-orm";
+import { ArrowRight, GraduationCap, Plus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { examsTable } from "@/db/schema";
+import AutoRefreshWhenGenerating from "@/components/realtime/AutoRefreshWhenGenerating";
+import { examsTable, generationJobsTable } from "@/db/schema";
 import { db } from "@/lib/db";
-import { safelyMarkStaleGenerationJobs } from "@/lib/generation-jobs";
+import {
+  markGenerationJobCompleted,
+  markGenerationJobFailed,
+  safelyMarkStaleGenerationJobs,
+} from "@/lib/generation-jobs";
+
+const EXAM_PLACEHOLDER_CONTENT = "Exam is generating.";
+const EXAM_PLACEHOLDER_GUIDE = "Marking guide is generating.";
+const EXAM_STALE_MINUTES = 10;
+
+function hasGeneratedExamContent(exam) {
+  if (!exam.content || !exam.markingGuide) {
+    return false;
+  }
+
+  if (exam.content === EXAM_PLACEHOLDER_CONTENT) {
+    return false;
+  }
+
+  if (exam.markingGuide === EXAM_PLACEHOLDER_GUIDE) {
+    return false;
+  }
+
+  return true;
+}
+
+function isStalePlaceholderExam(exam) {
+  if (exam.status !== "generating") {
+    return false;
+  }
+
+  if (hasGeneratedExamContent(exam)) {
+    return false;
+  }
+
+  if (!exam.createdAt) {
+    return false;
+  }
+
+  const createdAt = new Date(exam.createdAt);
+  const staleAt = new Date(createdAt.getTime() + EXAM_STALE_MINUTES * 60 * 1000);
+  const now = new Date();
+
+  if (now <= staleAt) {
+    return false;
+  }
+
+  return true;
+}
 
 function formatDate(date) {
   if (!date) {
@@ -56,6 +105,75 @@ export default async function ExamsPage() {
       .from(examsTable)
       .where(eq(examsTable.userId, userId))
       .orderBy(desc(examsTable.createdAt));
+
+    for (const exam of exams) {
+      if (hasGeneratedExamContent(exam) && exam.status !== "completed") {
+        await db
+          .update(examsTable)
+          .set({
+            status: "completed",
+          })
+          .where(
+            and(
+              eq(examsTable.id, exam.id),
+              eq(examsTable.userId, userId)
+            )
+          );
+
+        const activeJobs = await db
+          .select()
+          .from(generationJobsTable)
+          .where(
+            and(
+              eq(generationJobsTable.userId, userId),
+              eq(generationJobsTable.jobType, "exam"),
+              eq(generationJobsTable.targetId, exam.id),
+              eq(generationJobsTable.status, "generating")
+            )
+          );
+
+        for (const job of activeJobs) {
+          await markGenerationJobCompleted(job.id, "Exam generation completed.");
+        }
+
+        exam.status = "completed";
+      }
+
+      if (isStalePlaceholderExam(exam)) {
+        await db
+          .update(examsTable)
+          .set({
+            status: "failed",
+          })
+          .where(
+            and(
+              eq(examsTable.id, exam.id),
+              eq(examsTable.userId, userId)
+            )
+          );
+
+        const activeJobs = await db
+          .select()
+          .from(generationJobsTable)
+          .where(
+            and(
+              eq(generationJobsTable.userId, userId),
+              eq(generationJobsTable.jobType, "exam"),
+              eq(generationJobsTable.targetId, exam.id),
+              eq(generationJobsTable.status, "generating")
+            )
+          );
+
+        for (const job of activeJobs) {
+          await markGenerationJobFailed(
+            job.id,
+            "Exam generation timed out. Please try again."
+          );
+        }
+
+        exam.status = "failed";
+      }
+    }
   } catch (error) {
     console.warn("Failed to fetch exams:", error?.message ?? error);
     errorMessage =
@@ -89,8 +207,8 @@ export default async function ExamsPage() {
               </div>
 
               <Button asChild size="lg">
-                <Link href="/dashboard/courses">
-                  View Courses
+                <Link href="/dashboard/courses?generate=exam">
+                  Choose Course
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
@@ -126,26 +244,44 @@ export default async function ExamsPage() {
     );
   }
 
+  let hasGeneratingExam = false;
+
+  for (const exam of exams) {
+    if (exam.status === "generating") {
+      hasGeneratingExam = true;
+    }
+  }
+
   return (
     <div className="w-full space-y-6">
-      <div className="space-y-3">
-        <Badge variant="secondary" className="w-fit">
-          <GraduationCap className="h-3.5 w-3.5" />
-          Exams
-        </Badge>
-
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+          <Badge variant="secondary" className="w-fit">
+            <GraduationCap className="h-3.5 w-3.5" />
             Exams
-          </h1>
-          <p className="max-w-2xl text-sm leading-7 text-white/58 sm:text-base">
-            Generate structured exams from full course content when you are
-            ready to test yourself.
-          </p>
+          </Badge>
+
+          <div className="space-y-2">
+            <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+              Exams
+            </h1>
+            <p className="max-w-2xl text-sm leading-7 text-white/58 sm:text-base">
+              Generate structured exams from full course content when you are
+              ready to test yourself.
+            </p>
+          </div>
         </div>
+
+        <Button asChild>
+          <Link href="/dashboard/courses?generate=exam">
+            <Plus className="h-4 w-4" />
+            Create Exam
+          </Link>
+        </Button>
       </div>
 
       {content}
+      <AutoRefreshWhenGenerating enabled={hasGeneratingExam} />
     </div>
   );
 }

@@ -9,6 +9,8 @@ import { ArrowLeft, BookOpenText } from "lucide-react";
 import GenerateExamButton from "@/components/forms/GenerateExamButton";
 import GenerateFlashcardsButton from "@/components/forms/GenerateFlashcardsButton";
 import GenerateQuizButton from "@/components/forms/GenerateQuizButton";
+import DeleteCourseButton from "@/components/forms/DeleteCourseButton";
+import AutoRefreshWhenGenerating from "@/components/realtime/AutoRefreshWhenGenerating";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,9 +31,39 @@ function formatDate(date) {
   return new Date(date).toLocaleDateString();
 }
 
-export default async function CourseDetailsPage({ params }) {
+function getToolModeDetails(toolMode) {
+  if (toolMode === "quiz") {
+    return {
+      title: "Create a quiz from this course",
+      body: "Use the Generate Quiz button below. The quiz will be created from this course's saved chapters.",
+    };
+  }
+
+  if (toolMode === "flashcards") {
+    return {
+      title: "Create flashcards from this course",
+      body: "Use the Generate Flashcards button below. The cards will belong to this course.",
+    };
+  }
+
+  if (toolMode === "exam") {
+    return {
+      title: "Create an exam from this course",
+      body: "Use the Generate Exam button below. The exam will be generated from this course content.",
+    };
+  }
+
+  return {
+    title: "Create study tools for this course",
+    body: "Quizzes, flashcards, and exams are generated from the chapters saved inside this course.",
+  };
+}
+
+export default async function CourseDetailsPage({ params, searchParams }) {
   const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
   const courseId = Number(resolvedParams.courseId);
+  const toolMode = resolvedSearchParams?.generate;
 
   if (Number.isNaN(courseId)) {
     return <div>Invalid course ID</div>;
@@ -79,6 +111,8 @@ export default async function CourseDetailsPage({ params }) {
     return <div>Course not found</div>;
   }
 
+  const toolModeDetails = getToolModeDetails(toolMode);
+
   return (
     <div className="w-full space-y-6">
       <Card className="glass-panel-strong rounded-[2rem]">
@@ -119,6 +153,15 @@ export default async function CourseDetailsPage({ params }) {
             </div>
           </div>
 
+          <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-4">
+            <p className="text-sm font-semibold text-white">
+              {toolModeDetails.title}
+            </p>
+            <p className="mt-1 text-sm leading-6 text-white/56">
+              {toolModeDetails.body}
+            </p>
+          </div>
+
           <div className="grid gap-4 lg:grid-cols-4">
             <Button asChild variant="outline" className="rounded-full">
               <Link href={`/dashboard/courses/${course.id}/chapters`}>
@@ -131,14 +174,23 @@ export default async function CourseDetailsPage({ params }) {
             <GenerateExamButton courseId={course.id} />
           </div>
 
-          <Button asChild variant="ghost" className="rounded-full">
-            <Link href="/dashboard/courses">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Courses
-            </Link>
-          </Button>
+          <div className="flex flex-col gap-3 border-t border-white/8 pt-6 sm:flex-row sm:items-center sm:justify-between">
+            <Button asChild variant="ghost" className="rounded-full">
+              <Link href="/dashboard/courses">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Courses
+              </Link>
+            </Button>
+
+            <div className="w-full sm:w-auto">
+              <DeleteCourseButton courseId={course.id} />
+            </div>
+          </div>
         </CardContent>
       </Card>
+      <AutoRefreshWhenGenerating
+        enabled={course.status === "pending" || course.status === "generating"}
+      />
     </div>
   );
 }

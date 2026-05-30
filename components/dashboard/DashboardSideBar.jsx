@@ -57,7 +57,7 @@ export default function DashboardSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="border-b border-white/8 bg-[#070b14]/72 backdrop-blur-2xl lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-72 lg:border-b-0 lg:border-r lg:border-white/8">
+    <aside className="hidden border-b border-white/8 bg-[#070b14]/72 backdrop-blur-2xl lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:block lg:w-72 lg:border-b-0 lg:border-r lg:border-white/8">
       <div className="flex h-full flex-col gap-6 p-4 sm:p-5 lg:p-6">
         <div className="rounded-[1.75rem] border border-white/10 bg-[#111521]/68 p-4 shadow-[0_24px_70px_-50px_rgba(0,0,0,1)]">
           <div className="flex items-center gap-3">

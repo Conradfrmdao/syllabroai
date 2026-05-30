@@ -4,14 +4,18 @@ export const dynamic = "force-dynamic";
 import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
 import { and, desc, eq } from "drizzle-orm";
-import { ArrowRight, BrainCircuit } from "lucide-react";
+import { ArrowRight, BrainCircuit, Plus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { coursesTable, flashcardsTable, generationJobsTable } from "@/db/schema";
 import { db } from "@/lib/db";
-import { safelyMarkStaleGenerationJobs } from "@/lib/generation-jobs";
+import {
+  markGenerationJobCompleted,
+  safelyMarkStaleGenerationJobs,
+} from "@/lib/generation-jobs";
+import AutoRefreshWhenGenerating from "@/components/realtime/AutoRefreshWhenGenerating";
 
 function formatDate(date) {
   if (!date) {
@@ -90,6 +94,27 @@ export default async function FlashcardsPage() {
       .orderBy(desc(flashcardsTable.createdAt));
 
     groupedCourses = groupFlashcards(rows);
+
+    const groupedCourseIds = new Set();
+
+    for (const course of groupedCourses) {
+      groupedCourseIds.add(course.courseId);
+    }
+
+    const visibleJobs = [];
+
+    for (const job of activeFlashcardJobs) {
+      if (groupedCourseIds.has(job.courseId)) {
+        await markGenerationJobCompleted(
+          job.id,
+          "Flashcards are ready."
+        );
+      } else {
+        visibleJobs.push(job);
+      }
+    }
+
+    activeFlashcardJobs = visibleJobs;
   } catch (error) {
     console.warn("Failed to fetch flashcards:", error?.message ?? error);
     errorMessage =
@@ -127,8 +152,8 @@ export default async function FlashcardsPage() {
               </div>
 
               <Button asChild size="lg">
-                <Link href="/dashboard/courses">
-                  View Courses
+                <Link href="/dashboard/courses?generate=flashcards">
+                  Choose Course
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
@@ -196,24 +221,34 @@ export default async function FlashcardsPage() {
 
   return (
     <div className="w-full space-y-6">
-      <div className="space-y-3">
-        <Badge variant="secondary" className="w-fit">
-          <BrainCircuit className="h-3.5 w-3.5" />
-          Flashcards
-        </Badge>
-
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-            Flashcards
-          </h1>
-          <p className="max-w-2xl text-sm leading-7 text-white/58 sm:text-base">
-            Turn important concepts from your courses into active recall
-            flashcards.
-          </p>
+          <Badge variant="secondary" className="w-fit">
+            <BrainCircuit className="h-3.5 w-3.5" />
+            Study tool
+          </Badge>
+
+          <div className="space-y-2">
+            <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+              Flashcards
+            </h1>
+            <p className="max-w-2xl text-sm leading-7 text-white/58 sm:text-base">
+              Turn important concepts from your courses into active recall
+              flashcards.
+            </p>
+          </div>
         </div>
+
+        <Button asChild>
+          <Link href="/dashboard/courses?generate=flashcards">
+            <Plus className="h-4 w-4" />
+            Create Flashcards
+          </Link>
+        </Button>
       </div>
 
       {content}
+      <AutoRefreshWhenGenerating enabled={activeFlashcardJobs.length > 0} />
     </div>
   );
 }

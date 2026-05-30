@@ -7,14 +7,23 @@ import { and, eq } from "drizzle-orm";
 import { ArrowLeft, GraduationCap } from "lucide-react";
 
 import ExamAttemptClient from "@/components/learning/ExamAttemptClient";
+import AutoRefreshWhenGenerating from "@/components/realtime/AutoRefreshWhenGenerating";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { examsTable } from "@/db/schema";
+import { examsTable, generationJobsTable } from "@/db/schema";
 import { db } from "@/lib/db";
-import { safelyMarkStaleGenerationJobs } from "@/lib/generation-jobs";
+import {
+  markGenerationJobCompleted,
+  markGenerationJobFailed,
+  safelyMarkStaleGenerationJobs,
+} from "@/lib/generation-jobs";
 
-function StatusContent({ status }) {
+const EXAM_PLACEHOLDER_CONTENT = "Exam is generating.";
+const EXAM_PLACEHOLDER_GUIDE = "Marking guide is generating.";
+const EXAM_STALE_MINUTES = 10;
+
+function StatusContent({ status, courseId }) {
   if (status === "generating") {
     return (
       <Card className="glass-panel-strong rounded-[2rem]">
@@ -30,10 +39,17 @@ function StatusContent({ status }) {
   if (status === "failed") {
     return (
       <Card className="glass-panel-strong rounded-[2rem]">
-        <CardContent className="p-6 sm:p-8">
+        <CardContent className="space-y-5 p-6 sm:p-8">
           <p className="text-sm leading-7 text-rose-100">
-            Exam generation failed. Please go back to the course and try again.
+            Exam generation failed or took too long. Please go back to the
+            course and try again.
           </p>
+
+          <Button asChild>
+            <Link href={`/dashboard/courses/${courseId}`}>
+              Generate Exam Again
+            </Link>
+          </Button>
         </CardContent>
       </Card>
     );
@@ -50,6 +66,46 @@ function buildExamPayload(exam) {
     markingGuide: exam.markingGuide,
     status: exam.status,
   };
+}
+
+function hasGeneratedExamContent(exam) {
+  if (!exam.content || !exam.markingGuide) {
+    return false;
+  }
+
+  if (exam.content === EXAM_PLACEHOLDER_CONTENT) {
+    return false;
+  }
+
+  if (exam.markingGuide === EXAM_PLACEHOLDER_GUIDE) {
+    return false;
+  }
+
+  return true;
+}
+
+function isStalePlaceholderExam(exam) {
+  if (exam.status !== "generating") {
+    return false;
+  }
+
+  if (hasGeneratedExamContent(exam)) {
+    return false;
+  }
+
+  if (!exam.createdAt) {
+    return false;
+  }
+
+  const createdAt = new Date(exam.createdAt);
+  const staleAt = new Date(createdAt.getTime() + EXAM_STALE_MINUTES * 60 * 1000);
+  const now = new Date();
+
+  if (now <= staleAt) {
+    return false;
+  }
+
+  return true;
 }
 
 export default async function ExamDetailsPage({ params }) {
@@ -84,6 +140,73 @@ export default async function ExamDetailsPage({ params }) {
       .limit(1);
 
     exam = examResult[0];
+
+    if (exam && hasGeneratedExamContent(exam) && exam.status !== "completed") {
+      await db
+        .update(examsTable)
+        .set({
+          status: "completed",
+        })
+        .where(
+          and(
+            eq(examsTable.id, exam.id),
+            eq(examsTable.userId, userId)
+          )
+        );
+
+      const activeJobs = await db
+        .select()
+        .from(generationJobsTable)
+        .where(
+          and(
+            eq(generationJobsTable.userId, userId),
+            eq(generationJobsTable.jobType, "exam"),
+            eq(generationJobsTable.targetId, exam.id),
+            eq(generationJobsTable.status, "generating")
+          )
+        );
+
+      for (const job of activeJobs) {
+        await markGenerationJobCompleted(job.id, "Exam generation completed.");
+      }
+
+      exam.status = "completed";
+    }
+
+    if (exam && isStalePlaceholderExam(exam)) {
+      await db
+        .update(examsTable)
+        .set({
+          status: "failed",
+        })
+        .where(
+          and(
+            eq(examsTable.id, exam.id),
+            eq(examsTable.userId, userId)
+          )
+        );
+
+      const activeJobs = await db
+        .select()
+        .from(generationJobsTable)
+        .where(
+          and(
+            eq(generationJobsTable.userId, userId),
+            eq(generationJobsTable.jobType, "exam"),
+            eq(generationJobsTable.targetId, exam.id),
+            eq(generationJobsTable.status, "generating")
+          )
+        );
+
+      for (const job of activeJobs) {
+        await markGenerationJobFailed(
+          job.id,
+          "Exam generation timed out. Please try again."
+        );
+      }
+
+      exam.status = "failed";
+    }
   } catch (error) {
     console.warn("Failed to fetch exam:", error?.message ?? error);
     errorMessage =
@@ -102,7 +225,9 @@ export default async function ExamDetailsPage({ params }) {
     return <div>Exam not found</div>;
   }
 
-  const statusContent = <StatusContent status={exam.status} />;
+  const statusContent = (
+    <StatusContent status={exam.status} courseId={exam.courseId} />
+  );
 
   let examContent = null;
 
@@ -128,6 +253,7 @@ export default async function ExamDetailsPage({ params }) {
 
       {statusContent}
       {examContent}
+      <AutoRefreshWhenGenerating enabled={exam.status === "generating"} />
 
       <Button asChild variant="ghost" className="rounded-full">
         <Link href="/dashboard/exams">

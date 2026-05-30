@@ -82,19 +82,6 @@ const featureList = [
   "Weekly free course limit with upgrade option",
 ];
 
-const chapterFormat = [
-  "Overview",
-  "Learning Objectives",
-  "Core Concepts",
-  "Step-by-Step Explanation",
-  "Practical Examples",
-  "Common Mistakes",
-  "Real-World Application",
-  "Practice Tasks",
-  "Quick Self-Test",
-  "Summary",
-];
-
 const useCases = [
   {
     title: "Students",
@@ -116,34 +103,48 @@ const useCases = [
 
 const pricingTiers = [
   {
-    name: "Free Plan",
-    description: "Great for testing SyllabroAI",
+    name: "Free",
+    price: "0 UGX",
+    description: "For trying SyllabroAI and building your first study paths",
     points: [
       "2 courses per week",
-      "AI-generated chapters",
-      "Basic dashboard",
+      "AI-generated course chapters",
+      "Basic quizzes and flashcards",
+      "Private learner dashboard",
     ],
   },
   {
-    name: "Pro Plan",
-    description: "Better for serious learners",
+    name: "Standard",
+    price: "20k UGX",
+    description: "For learners who want more structure and practice",
+    points: [
+      "More weekly course generations",
+      "Longer course outlines",
+      "Quiz and flashcard generation",
+      "Saved courses and study tools",
+    ],
+  },
+  {
+    name: "Pro",
+    price: "50k UGX",
+    description: "For serious self-learners and professionals",
     featured: true,
     points: [
-      "More course generations",
-      "Full quizzes",
-      "Flashcards",
-      "Exam generation",
-      "Priority AI generation",
+      "Higher course generation limits",
+      "Deeper chapters and revision tools",
+      "Full quiz, flashcard, and exam workflows",
+      "Priority generation when available",
     ],
   },
   {
-    name: "School Plan",
-    description: "Best for institutions",
+    name: "School",
+    price: "100k UGX",
+    description: "For classes, tutors, and institutions",
     points: [
-      "Multiple users",
-      "Teacher and admin controls",
-      "Class-based learning",
-      "Custom limits",
+      "Multiple learner accounts",
+      "Teacher and admin controls coming soon",
+      "Class-based learning workflows",
+      "Custom limits for institutions",
     ],
   },
 ];
@@ -203,7 +204,7 @@ function SectionHeading({ badge, title, body }) {
 
 export default function HomePage() {
   return (
-    <main className="app-shell-bg relative min-h-screen text-white">
+    <main className="relative min-h-screen bg-black text-white">
       <header className="fixed left-1/2 top-5 z-50 w-[calc(100%-2rem)] max-w-5xl -translate-x-1/2 rounded-full border border-white/10 bg-[#1f1f1f57] px-4 py-3 backdrop-blur-xl">
         <div className="flex w-full items-center justify-between gap-5">
           <Link
@@ -329,42 +330,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr]">
-          <div className="space-y-6">
-            <Badge variant="secondary">AI quality</Badge>
-            <h2 className="text-3xl font-semibold tracking-[-0.03em] text-white sm:text-4xl">
-              Not just summaries. Real learning material.
-            </h2>
-            <p className="text-base leading-8 text-white/58 sm:text-lg">
-              SyllabroAI is designed to generate structured learning notes with
-              clear sections such as overview, learning objectives, core
-              concepts, step-by-step explanations, practical examples, common
-              mistakes, real-world applications, practice tasks, self-tests,
-              and summaries.
-            </p>
-          </div>
-
-          <Card className="glass-panel-strong">
-            <CardHeader className="space-y-3 border-b border-white/8 pb-6">
-              <CardTitle className="text-2xl">Chapter Format</CardTitle>
-              <CardDescription>
-                A consistent structure that supports deeper understanding and revision.
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="grid gap-3 p-6 sm:grid-cols-2">
-              {chapterFormat.map((item) => (
-                <div
-                  key={item}
-                  className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-sm text-white/72"
-                >
-                  {item}
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </section>
-
         <section className="space-y-10">
           <SectionHeading
             badge="Use cases"
@@ -389,11 +354,11 @@ export default function HomePage() {
         <section id="pricing" className="space-y-10">
           <SectionHeading
             badge="Pricing"
-            title="Start free. Upgrade when you need more."
-            body="Choose a plan that matches how deeply you want to build and manage learning material."
+            title="Simple plans for serious learning"
+            body="Pricing is built for learners, professionals, and schools that need structured AI-generated study material."
           />
 
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {pricingTiers.map((tier) => (
               <Card
                 key={tier.name}
@@ -401,6 +366,9 @@ export default function HomePage() {
               >
                 <CardHeader className="space-y-3 border-b border-white/8 pb-6">
                   <CardTitle className="text-2xl">{tier.name}</CardTitle>
+                  <p className="text-4xl font-semibold tracking-[-0.04em] text-white">
+                    {tier.price}
+                  </p>
                   <CardDescription>{tier.description}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 p-6">
@@ -417,7 +385,7 @@ export default function HomePage() {
 
           <div className="flex justify-center">
             <Button asChild size="lg">
-              <Link href="/sign-up">Start with the free plan today.</Link>
+              <Link href="/sign-up">Start learning today</Link>
             </Button>
           </div>
         </section>

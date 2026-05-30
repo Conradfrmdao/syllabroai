@@ -7,6 +7,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { ArrowLeft, FileQuestion } from "lucide-react";
 
 import QuizAttemptClient from "@/components/learning/QuizAttemptClient";
+import AutoRefreshWhenGenerating from "@/components/realtime/AutoRefreshWhenGenerating";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -170,6 +171,7 @@ export default async function QuizDetailsPage({ params }) {
 
       {statusContent}
       {questionContent}
+      <AutoRefreshWhenGenerating enabled={quiz.status === "generating"} />
 
       <Button asChild variant="ghost" className="rounded-full">
         <Link href="/dashboard/quizzes">

@@ -13,9 +13,41 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import AutoRefreshWhenGenerating from "@/components/realtime/AutoRefreshWhenGenerating";
 import { safelyMarkStaleGenerationJobs } from "@/lib/generation-jobs";
 
-export default async function CoursesPage() {
+function getGenerateModeDetails(generateMode) {
+  if (generateMode === "quiz") {
+    return {
+      title: "Choose a course for your quiz",
+      body: "Quizzes are created from a specific course. Pick the course whose chapters should become quiz questions.",
+      cardAction: "Create quiz from this course",
+    };
+  }
+
+  if (generateMode === "flashcards") {
+    return {
+      title: "Choose a course for flashcards",
+      body: "Flashcards belong to a course. Pick the source course so SyllabroAI can turn its chapters into active recall cards.",
+      cardAction: "Create flashcards from this course",
+    };
+  }
+
+  if (generateMode === "exam") {
+    return {
+      title: "Choose a course for your exam",
+      body: "Exams are generated from course content. Pick the course you want to test yourself on.",
+      cardAction: "Create exam from this course",
+    };
+  }
+
+  return null;
+}
+
+export default async function CoursesPage({ searchParams }) {
+  const resolvedSearchParams = await searchParams;
+  const generateMode = resolvedSearchParams?.generate;
+  const generateModeDetails = getGenerateModeDetails(generateMode);
   let coursesList = [];
   let errorMessage = "";
 
@@ -65,10 +97,18 @@ export default async function CoursesPage() {
     content = (
       <div className="space-y-4">
         {coursesList.map((course) => {
+          let courseHref = `/dashboard/courses/${course.id}`;
+          let cardAction = "Open course";
+
+          if (generateModeDetails) {
+            courseHref = `/dashboard/courses/${course.id}?generate=${generateMode}`;
+            cardAction = generateModeDetails.cardAction;
+          }
+
           return (
             <Link
               key={course.id}
-              href={`/dashboard/courses/${course.id}`}
+              href={courseHref}
               className="block"
             >
               <Card className="cursor-pointer rounded-[2rem] transition hover:border-white/18 hover:bg-white/[0.04]">
@@ -88,6 +128,10 @@ export default async function CoursesPage() {
                     Created{" "}
                     {new Date(course.createdAt).toLocaleDateString()}
                   </p>
+
+                  <p className="pt-2 text-sm font-medium text-white">
+                    {cardAction}
+                  </p>
                 </CardContent>
               </Card>
             </Link>
@@ -97,18 +141,35 @@ export default async function CoursesPage() {
     );
   }
 
+  let hasGeneratingCourse = false;
+
+  for (const course of coursesList) {
+    if (course.status === "pending" || course.status === "generating") {
+      hasGeneratingCourse = true;
+    }
+  }
+
+  let pageTitle = "Your Courses";
+  let pageBody =
+    "Browse every course you have generated and jump back into the next learning session quickly.";
+
+  if (generateModeDetails) {
+    pageTitle = generateModeDetails.title;
+    pageBody = generateModeDetails.body;
+  }
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight text-white">
-          Your Courses
+          {pageTitle}
         </h1>
         <p className="text-white/58">
-          Browse every course you have generated and jump back into the next
-          learning session quickly.
+          {pageBody}
         </p>
       </div>
       {content}
+      <AutoRefreshWhenGenerating enabled={hasGeneratingCourse} />
     </div>
   );
 }

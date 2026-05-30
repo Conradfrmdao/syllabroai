@@ -1,5 +1,6 @@
 import DashboardSidebar from "./DashboardSideBar";
 import DashboardTopbar from "./DashboardTopbar";
+import MobileBottomNav from "./MobileBottomNav";
 
 export default function DashboardShell({ children }) {
   return (
@@ -14,11 +15,13 @@ export default function DashboardShell({ children }) {
         <div className="relative flex min-h-screen w-full min-w-0 flex-col">
           <DashboardTopbar />
 
-          <main className="w-full flex-1 px-4 pb-6 pt-4 sm:px-6 lg:px-8 lg:pb-8">
+          <main className="w-full flex-1 px-4 pb-32 pt-4 sm:px-6 lg:px-8 lg:pb-8">
             <div className="w-full min-w-0">{children}</div>
           </main>
         </div>
       </div>
+
+      <MobileBottomNav />
     </div>
   );
 }
