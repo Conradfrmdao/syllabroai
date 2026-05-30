@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { SignIn } from "@clerk/nextjs";
 import { ArrowLeft } from "lucide-react";
 
@@ -15,7 +16,21 @@ export default function SignInPage() {
         </Link>
       </div>
 
-      <div className="flex flex-1 items-center justify-center">
+      <div className="flex flex-1 flex-col items-center justify-center gap-8">
+        <div className="flex items-center gap-3">
+          <Image
+            src="/syllabro-icon.png"
+            alt="SyllabroAI logo"
+            width={44}
+            height={44}
+            className="h-11 w-11 object-contain"
+            priority
+          />
+          <span className="text-2xl font-semibold tracking-[-0.03em] text-white">
+            SyllabroAI
+          </span>
+        </div>
+
         <SignIn />
       </div>
     </div>

@@ -6,9 +6,10 @@ import Link from "next/link";
 import { and, eq } from "drizzle-orm";
 import { ArrowLeft, GraduationCap } from "lucide-react";
 
+import ExamAttemptClient from "@/components/learning/ExamAttemptClient";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { examsTable } from "@/db/schema";
 import { db } from "@/lib/db";
 import { safelyMarkStaleGenerationJobs } from "@/lib/generation-jobs";
@@ -39,6 +40,16 @@ function StatusContent({ status }) {
   }
 
   return null;
+}
+
+function buildExamPayload(exam) {
+  return {
+    id: exam.id,
+    title: exam.title,
+    content: exam.content,
+    markingGuide: exam.markingGuide,
+    status: exam.status,
+  };
 }
 
 export default async function ExamDetailsPage({ params }) {
@@ -96,33 +107,7 @@ export default async function ExamDetailsPage({ params }) {
   let examContent = null;
 
   if (exam.status === "completed") {
-    examContent = (
-      <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
-        <Card className="glass-panel-strong rounded-[2rem]">
-          <CardHeader className="border-b border-white/8 pb-5">
-            <CardTitle className="text-2xl">Exam Paper</CardTitle>
-          </CardHeader>
-
-          <CardContent className="p-6">
-            <div className="whitespace-pre-wrap text-sm leading-8 text-white/72">
-              {exam.content}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-panel-strong rounded-[2rem]">
-          <CardHeader className="border-b border-white/8 pb-5">
-            <CardTitle className="text-2xl">Marking Guide</CardTitle>
-          </CardHeader>
-
-          <CardContent className="p-6">
-            <div className="whitespace-pre-wrap text-sm leading-8 text-white/72">
-              {exam.markingGuide}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    examContent = <ExamAttemptClient exam={buildExamPayload(exam)} />;
   }
 
   return (

@@ -204,31 +204,29 @@ function SectionHeading({ badge, title, body }) {
 export default function HomePage() {
   return (
     <main className="app-shell-bg relative min-h-screen text-white">
-      <header className="sticky top-0 z-50 border-b border-white/8 bg-black/70 backdrop-blur-2xl">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-4 sm:px-8 lg:px-10">
+      <header className="fixed left-1/2 top-5 z-50 w-[calc(100%-2rem)] max-w-5xl -translate-x-1/2 rounded-full border border-white/10 bg-[#1f1f1f57] px-4 py-3 backdrop-blur-xl">
+        <div className="flex w-full items-center justify-between gap-5">
           <Link
             href="/"
             className="inline-flex items-center gap-3 text-lg font-semibold tracking-[-0.03em] text-white"
           >
-            <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl border border-white/12 bg-white">
-              <Image
-                src="/syllabro-icon.png"
-                alt="SyllabroAI logo"
-                width={32}
-                height={32}
-                className="h-8 w-8 object-contain"
-                priority
-              />
-            </span>
+            <Image
+              src="/syllabro-icon.png"
+              alt="SyllabroAI logo"
+              width={36}
+              height={36}
+              className="h-9 w-9 object-contain"
+              priority
+            />
             <span>SyllabroAI</span>
           </Link>
 
-          <nav className="hidden items-center gap-8 md:flex">
+          <nav className="hidden items-center gap-6 md:flex">
             {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="text-sm text-white/62 transition hover:text-white"
+                className="text-sm text-white/58 transition hover:text-white"
               >
                 {item.label}
               </Link>
@@ -245,6 +243,8 @@ export default function HomePage() {
           </div>
         </div>
       </header>
+
+      <div className="h-16" />
 
       <HeroGeometric
         badge="Built for students, self-learners, tutors, and modern schools."

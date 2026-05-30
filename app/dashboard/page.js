@@ -6,11 +6,60 @@ import { auth } from "@clerk/nextjs/server";
 import { and, count, eq, gte } from "drizzle-orm";
 
 import { db } from "@/lib/db";
-import { coursesTable, usersTable } from "@/db/schema";
+import {
+  coursesTable,
+  examsTable,
+  flashcardsTable,
+  quizQuestionsTable,
+  quizzesTable,
+  usersTable,
+} from "@/db/schema";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+
+function getTotal(result) {
+  if (!result || result.length === 0) {
+    return 0;
+  }
+
+  const firstRow = result[0];
+
+  if (!firstRow || !firstRow.total) {
+    return 0;
+  }
+
+  return Number(firstRow.total);
+}
+
+function MetricCard({ label, value, detail, featured = false }) {
+  let cardClassName =
+    "quiet-card relative overflow-hidden rounded-[2rem]";
+  let valueClassName = "text-3xl font-semibold tracking-tight text-white";
+  let detailClassName = "text-xs leading-5 text-white/42";
+
+  if (featured) {
+    cardClassName =
+      "quiet-card dot-matrix relative overflow-hidden rounded-[2rem] md:col-span-2 xl:col-span-4";
+    valueClassName = "text-5xl font-semibold tracking-tight text-white sm:text-6xl";
+    detailClassName = "text-sm leading-6 text-white/50";
+  }
+
+  return (
+    <Card className={cardClassName}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-xs font-medium uppercase tracking-[0.2em] text-white/44">
+          {label}
+        </CardTitle>
+      </CardHeader>
+
+      <CardContent className="space-y-1">
+        <p className={valueClassName}>{value}</p>
+        <p className={detailClassName}>{detail}</p>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default async function DashboardPage() {
   const { userId } = await auth();
@@ -24,6 +73,10 @@ export default async function DashboardPage() {
 
   let totalCourses = 0;
   let coursesThisWeek = 0;
+  let totalQuizzes = 0;
+  let totalQuizQuestions = 0;
+  let totalFlashcards = 0;
+  let totalExams = 0;
   let plan = "free";
   let errorMessage = "";
 
@@ -35,7 +88,7 @@ export default async function DashboardPage() {
       .from(coursesTable)
       .where(eq(coursesTable.userId, userId));
 
-    totalCourses = totalCoursesResult[0].total;
+    totalCourses = getTotal(totalCoursesResult);
 
     const weeklyCoursesResult = await db
       .select({
@@ -49,7 +102,44 @@ export default async function DashboardPage() {
         )
       );
 
-    coursesThisWeek = weeklyCoursesResult[0].total;
+    coursesThisWeek = getTotal(weeklyCoursesResult);
+
+    const quizzesResult = await db
+      .select({
+        total: count(),
+      })
+      .from(quizzesTable)
+      .where(eq(quizzesTable.userId, userId));
+
+    totalQuizzes = getTotal(quizzesResult);
+
+    const quizQuestionsResult = await db
+      .select({
+        total: count(),
+      })
+      .from(quizQuestionsTable)
+      .innerJoin(quizzesTable, eq(quizQuestionsTable.quizId, quizzesTable.id))
+      .where(eq(quizzesTable.userId, userId));
+
+    totalQuizQuestions = getTotal(quizQuestionsResult);
+
+    const flashcardsResult = await db
+      .select({
+        total: count(),
+      })
+      .from(flashcardsTable)
+      .where(eq(flashcardsTable.userId, userId));
+
+    totalFlashcards = getTotal(flashcardsResult);
+
+    const examsResult = await db
+      .select({
+        total: count(),
+      })
+      .from(examsTable)
+      .where(eq(examsTable.userId, userId));
+
+    totalExams = getTotal(examsResult);
 
     const userResult = await db
       .select()
@@ -78,6 +168,7 @@ export default async function DashboardPage() {
   }
 
   let remainingCourses = weeklyLimit - coursesThisWeek;
+  const totalStudyMaterials = totalQuizzes + totalFlashcards + totalExams;
 
   if (remainingCourses < 0) {
     remainingCourses = 0;
@@ -95,73 +186,62 @@ export default async function DashboardPage() {
 
   if (!errorMessage) {
     content = (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">
-              Total Courses
-            </CardTitle>
-          </CardHeader>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          label="Courses Created"
+          value={totalCourses}
+          detail="Saved learning paths"
+          featured={true}
+        />
 
-          <CardContent>
-            <p className="text-3xl font-bold">{totalCourses}</p>
-          </CardContent>
-        </Card>
+        <MetricCard
+          label="Courses This Week"
+          value={coursesThisWeek}
+          detail={limitText}
+        />
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">
-              Courses This Week
-            </CardTitle>
-          </CardHeader>
+        <MetricCard
+          label="Remaining Courses"
+          value={remainingCourses}
+          detail="Available on your current plan"
+        />
 
-          <CardContent>
-            <p className="text-3xl font-bold">{coursesThisWeek}</p>
-          </CardContent>
-        </Card>
+        <MetricCard
+          label="Quizzes Ready"
+          value={totalQuizzes}
+          detail="Generated quiz sets"
+        />
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">
-              Remaining Courses
-            </CardTitle>
-          </CardHeader>
+        <MetricCard
+          label="Quiz Questions"
+          value={totalQuizQuestions}
+          detail="Practice questions available"
+        />
 
-          <CardContent>
-            <p className="text-3xl font-bold">{remainingCourses}</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {limitText}
-            </p>
-          </CardContent>
-        </Card>
+        <MetricCard
+          label="Flashcards Ready"
+          value={totalFlashcards}
+          detail="Active recall cards"
+        />
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">
-              Current Plan
-            </CardTitle>
-          </CardHeader>
+        <MetricCard
+          label="Exams Ready"
+          value={totalExams}
+          detail="Structured exams generated"
+        />
 
-          <CardContent>
-            <Badge>{plan}</Badge>
-          </CardContent>
-        </Card>
+        <MetricCard
+          label="Study Materials"
+          value={totalStudyMaterials}
+          detail="Quizzes, flashcards, and exams"
+        />
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      <section className="flex items-start justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-white">
-            Dashboard
-          </h1>
-          <p className="text-white/58">
-            Track your SyllabroAI learning materials.
-          </p>
-        </div>
-
+    <div className="space-y-5">
+      <section className="flex justify-end">
         <Button asChild>
           <Link href="/dashboard/create-course">Create Course</Link>
         </Button>

@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { safelyMarkStaleGenerationJobs } from "@/lib/generation-jobs";
 
 export default async function CoursesPage() {
@@ -49,9 +50,14 @@ export default async function CoursesPage() {
 
   if (!errorMessage && coursesList.length === 0) {
     content = (
-      <p className="rounded-2xl border border-white/8 bg-white/[0.04] px-5 py-4 text-white/62">
-        No courses created yet.
-      </p>
+      <Card className="rounded-[2rem]">
+        <CardContent className="p-6">
+          <p className="text-sm leading-7 text-white/62">
+            No courses created yet. Start by generating a course from a clear
+            learning goal.
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -65,20 +71,21 @@ export default async function CoursesPage() {
               href={`/dashboard/courses/${course.id}`}
               className="block"
             >
-              <Card className="cursor-pointer transition hover:bg-muted/50">
-                <CardHeader>
-                  <CardTitle>{course.title}</CardTitle>
+              <Card className="cursor-pointer rounded-[2rem] transition hover:border-white/18 hover:bg-white/[0.04]">
+                <CardHeader className="space-y-3 border-b border-white/8 pb-5">
+                  <Badge variant="outline" className="w-fit">
+                    {course.status}
+                  </Badge>
+                  <CardTitle className="text-2xl">{course.title}</CardTitle>
                 </CardHeader>
 
                 <CardContent className="space-y-2">
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm leading-7 text-white/58">
                     {course.description}
                   </p>
 
-                  <p className="text-sm">Status: {course.status}</p>
-
-                  <p className="text-sm">
-                    Created At:{" "}
+                  <p className="text-xs uppercase tracking-[0.18em] text-white/38">
+                    Created{" "}
                     {new Date(course.createdAt).toLocaleDateString()}
                   </p>
                 </CardContent>

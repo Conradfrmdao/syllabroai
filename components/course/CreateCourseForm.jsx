@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import {
   BookOpenText,
   BrainCircuit,
-  Command,
   FileQuestion,
   Layers3,
   LoaderCircle,
@@ -86,12 +85,12 @@ export default function CreateCourseForm() {
     }
 
     if (reset) {
-      textarea.style.height = "120px";
+      textarea.style.height = "84px";
       return;
     }
 
-    textarea.style.height = "120px";
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 220)}px`;
+    textarea.style.height = "84px";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 140)}px`;
   }, []);
 
   useEffect(() => {
@@ -116,25 +115,25 @@ export default function CreateCourseForm() {
 
   return (
     <Card className="glass-panel-strong rounded-[2rem]">
-      <CardHeader className="space-y-3 border-b border-white/8 pb-4">
+      <CardHeader className="space-y-2 border-b border-white/8 p-4 pb-3 sm:p-5 sm:pb-3">
         <Badge variant="outline" className="w-fit">
           <Sparkles className="h-3.5 w-3.5" />
           Course builder
         </Badge>
 
         <div className="space-y-2">
-          <CardTitle className="text-xl sm:text-2xl">
+          <CardTitle className="text-lg sm:text-xl">
             Create a structured course from a single prompt
           </CardTitle>
-          <CardDescription className="max-w-2xl text-sm leading-6 text-white/58">
+          <CardDescription className="max-w-2xl text-xs leading-5 text-white/54 sm:text-sm">
             Add a direct title, then describe the learner level, scope, and
             expected outcome.
           </CardDescription>
         </div>
       </CardHeader>
 
-      <CardContent className="p-4 sm:p-5">
-        <form action={formAction} className="space-y-4">
+      <CardContent className="p-4">
+        <form action={formAction} className="space-y-3">
           <div className="space-y-2">
             <label htmlFor="course-title" className="text-sm font-medium text-white/82">
               Course title
@@ -149,12 +148,8 @@ export default function CreateCourseForm() {
               autoComplete="off"
               required
               maxLength={120}
-              className="h-10 rounded-[1.1rem]"
+              className="h-9 rounded-[1.1rem]"
             />
-
-            <p className="text-xs text-white/38">
-              Use a direct title that clearly states the topic or outcome.
-            </p>
           </div>
 
           <div className="space-y-3">
@@ -165,11 +160,6 @@ export default function CreateCourseForm() {
                   Describe what the learner should achieve and how the course
                   should feel.
                 </p>
-              </div>
-
-              <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-white/48 sm:inline-flex">
-                <Command className="h-3.5 w-3.5" />
-                Prompt field
               </div>
             </div>
 
@@ -190,23 +180,23 @@ export default function CreateCourseForm() {
                 onBlur={() => setIsComposerFocused(false)}
                 placeholder="Example: Create an intermediate course for aspiring product designers who want to master interviews. Include a weekly structure, mock questions, mini quizzes, and flashcards for fast revision."
                 required
-                className="min-h-[120px] resize-none border-0 bg-transparent px-1 py-1 text-sm leading-6 shadow-none ring-0 focus-visible:border-transparent focus-visible:ring-0"
+                className="min-h-[84px] resize-none border-0 bg-transparent px-1 py-1 text-sm leading-6 shadow-none ring-0 focus-visible:border-transparent focus-visible:ring-0"
               />
 
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-2 flex flex-wrap gap-2">
                 {promptIdeas.map((idea) => (
                   <button
                     key={idea.label}
                     type="button"
                     onClick={() => handleInsertPrompt(idea.prompt)}
-                    className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-white/68 transition hover:bg-white/[0.08] hover:text-white"
+                    className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-white/68 transition hover:bg-white/[0.08] hover:text-white"
                   >
                     {idea.label}
                   </button>
                 ))}
               </div>
 
-              <div className="mt-4 flex flex-col gap-3 border-t border-white/8 pt-3">
+              <div className="mt-3 flex flex-col gap-3 border-t border-white/8 pt-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex flex-wrap gap-2">
                   {outputPills.map((item) => {
                     const Icon = item.icon;

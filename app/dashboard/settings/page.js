@@ -5,13 +5,11 @@ import { UserButton } from "@clerk/nextjs";
 import {
   BadgeCheck,
   CreditCard,
-  Settings,
   ShieldCheck,
   SlidersHorizontal,
   UserRound,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getOrCreateCurrentUser } from "@/lib/current-user";
 
@@ -25,18 +23,20 @@ function formatDate(date) {
 
 function InfoRow({ label, value }) {
   return (
-    <div className="rounded-2xl border border-white/8 bg-black/30 p-4">
+    <div className="min-w-0 rounded-2xl border border-white/8 bg-black/30 p-3">
       <p className="text-xs uppercase tracking-[0.18em] text-white/36">
         {label}
       </p>
-      <p className="mt-1 text-sm font-medium text-white/82">{value}</p>
+      <p className="mt-1 break-words text-sm font-medium text-white/82">
+        {value}
+      </p>
     </div>
   );
 }
 
 function SectionIcon({ children }) {
   return (
-    <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white">
+    <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white">
       {children}
     </div>
   );
@@ -85,36 +85,19 @@ export default async function SettingsPage() {
   }
 
   return (
-    <div className="w-full space-y-6">
-      <div className="space-y-3">
-        <Badge variant="secondary" className="w-fit">
-          <Settings className="h-3.5 w-3.5" />
-          Settings
-        </Badge>
-
-        <div className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-            Settings
-          </h1>
-          <p className="max-w-2xl text-sm leading-7 text-white/58 sm:text-base">
-            Manage your SyllabroAI account details, plan, limits, and security
-            information.
-          </p>
-        </div>
-      </div>
-
-      <div className="grid gap-5 xl:grid-cols-2">
+    <div className="w-full">
+      <div className="grid gap-3 xl:grid-cols-2">
         <Card className="glass-panel-strong rounded-[2rem]">
-          <CardHeader className="border-b border-white/8 pb-5">
+          <CardHeader className="border-b border-white/8 p-3">
             <div className="flex items-center gap-3">
               <SectionIcon>
                 <UserRound className="h-5 w-5" />
               </SectionIcon>
-              <CardTitle className="text-2xl">Account</CardTitle>
+              <CardTitle className="text-xl">Account</CardTitle>
             </div>
           </CardHeader>
 
-          <CardContent className="grid gap-3 p-6 sm:grid-cols-2">
+          <CardContent className="grid gap-2 p-3 sm:grid-cols-3">
             <InfoRow label="Name" value={displayName} />
             <InfoRow label="Email" value={displayEmail} />
             <InfoRow
@@ -125,38 +108,38 @@ export default async function SettingsPage() {
         </Card>
 
         <Card className="glass-panel-strong rounded-[2rem]">
-          <CardHeader className="border-b border-white/8 pb-5">
+          <CardHeader className="border-b border-white/8 p-3">
             <div className="flex items-center gap-3">
               <SectionIcon>
                 <BadgeCheck className="h-5 w-5" />
               </SectionIcon>
-              <CardTitle className="text-2xl">Plan</CardTitle>
+              <CardTitle className="text-xl">Plan</CardTitle>
             </div>
           </CardHeader>
 
-          <CardContent className="grid gap-3 p-6 sm:grid-cols-2">
+          <CardContent className="grid gap-2 p-3 sm:grid-cols-2">
             <InfoRow label="Current Plan" value={planName} />
             <InfoRow label="Weekly Course Limit" value="2 courses" />
           </CardContent>
         </Card>
 
         <Card className="glass-panel-strong rounded-[2rem]">
-          <CardHeader className="border-b border-white/8 pb-5">
+          <CardHeader className="border-b border-white/8 p-3">
             <div className="flex items-center gap-3">
               <SectionIcon>
                 <ShieldCheck className="h-5 w-5" />
               </SectionIcon>
-              <CardTitle className="text-2xl">Account Security</CardTitle>
+              <CardTitle className="text-xl">Account Security</CardTitle>
             </div>
           </CardHeader>
 
-          <CardContent className="space-y-4 p-6">
-            <p className="text-sm leading-7 text-white/62">
+          <CardContent className="space-y-2 p-3">
+            <p className="text-sm leading-6 text-white/62">
               Authentication, sessions, and profile management are handled
               securely by Clerk.
             </p>
 
-            <div className="flex items-center justify-between rounded-2xl border border-white/8 bg-black/30 p-4">
+            <div className="flex items-center justify-between rounded-2xl border border-white/8 bg-black/30 p-3">
               <div>
                 <p className="text-sm font-medium text-white">Clerk account</p>
                 <p className="text-xs leading-5 text-white/48">
@@ -170,17 +153,17 @@ export default async function SettingsPage() {
         </Card>
 
         <Card className="glass-panel-strong rounded-[2rem]">
-          <CardHeader className="border-b border-white/8 pb-5">
+          <CardHeader className="border-b border-white/8 p-3">
             <div className="flex items-center gap-3">
               <SectionIcon>
                 <CreditCard className="h-5 w-5" />
               </SectionIcon>
-              <CardTitle className="text-2xl">Coming Soon</CardTitle>
+              <CardTitle className="text-xl">Coming Soon</CardTitle>
             </div>
           </CardHeader>
 
-          <CardContent className="grid gap-3 p-6">
-            <div className="rounded-2xl border border-white/8 bg-black/30 p-4">
+          <CardContent className="grid gap-2 p-3 sm:grid-cols-2 xl:grid-cols-1">
+            <div className="rounded-2xl border border-white/8 bg-black/30 p-3">
               <div className="flex items-center gap-3">
                 <CreditCard className="h-4 w-4 text-white/62" />
                 <div>
@@ -194,7 +177,7 @@ export default async function SettingsPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/8 bg-black/30 p-4">
+            <div className="rounded-2xl border border-white/8 bg-black/30 p-3">
               <div className="flex items-center gap-3">
                 <SlidersHorizontal className="h-4 w-4 text-white/62" />
                 <div>

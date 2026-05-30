@@ -57,25 +57,23 @@ export default function DashboardSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="border-b border-white/8 bg-slate-950/34 backdrop-blur-2xl lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-72 lg:border-b-0 lg:border-r lg:border-white/8">
+    <aside className="border-b border-white/8 bg-[#070b14]/72 backdrop-blur-2xl lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-72 lg:border-b-0 lg:border-r lg:border-white/8">
       <div className="flex h-full flex-col gap-6 p-4 sm:p-5 lg:p-6">
-        <div className="glass-panel rounded-[1.75rem] p-4">
+        <div className="rounded-[1.75rem] border border-white/10 bg-[#111521]/68 p-4 shadow-[0_24px_70px_-50px_rgba(0,0,0,1)]">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl border border-white/12 bg-white shadow-[0_14px_30px_-18px_rgba(255,255,255,0.24)]">
-              <Image
-                src="/syllabro-icon.png"
-                alt="SyllabroAI logo"
-                width={40}
-                height={40}
-                className="h-10 w-10 object-contain"
-              />
-            </div>
+            <Image
+              src="/syllabro-icon.png"
+              alt="SyllabroAI logo"
+              width={46}
+              height={46}
+              className="h-12 w-12 object-contain"
+            />
 
             <div>
               <p className="text-xs uppercase tracking-[0.24em] text-white/38">
                 AI Study Lab
               </p>
-              <h2 className="text-lg font-semibold text-white">Syllabro AI</h2>
+              <h2 className="text-lg font-semibold text-white">SyllabroAI</h2>
             </div>
           </div>
         </div>
@@ -92,7 +90,7 @@ export default function DashboardSidebar() {
                 className={cn(
                   "group flex min-w-max items-center gap-3 rounded-2xl border px-4 py-3 text-sm transition-all",
                   isActive
-                    ? "border-white/18 bg-white/[0.08] text-white shadow-[0_18px_38px_-24px_rgba(255,255,255,0.08)]"
+                    ? "border-white/18 bg-white/[0.09] text-white shadow-[0_18px_38px_-28px_rgba(56,189,248,0.18)]"
                     : "border-white/0 bg-white/[0.03] text-white/62 hover:border-white/10 hover:bg-white/[0.06] hover:text-white"
                 )}
               >

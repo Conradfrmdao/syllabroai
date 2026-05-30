@@ -4,35 +4,15 @@ export const dynamic = "force-dynamic";
 import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
 import { and, asc, eq } from "drizzle-orm";
-import { ArrowLeft, CheckCircle2, FileQuestion } from "lucide-react";
+import { ArrowLeft, FileQuestion } from "lucide-react";
 
+import QuizAttemptClient from "@/components/learning/QuizAttemptClient";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { quizQuestionsTable, quizzesTable } from "@/db/schema";
 import { db } from "@/lib/db";
 import { safelyMarkStaleGenerationJobs } from "@/lib/generation-jobs";
-
-function getOptions(question) {
-  return [
-    {
-      letter: "A",
-      text: question.optionA,
-    },
-    {
-      letter: "B",
-      text: question.optionB,
-    },
-    {
-      letter: "C",
-      text: question.optionC,
-    },
-    {
-      letter: "D",
-      text: question.optionD,
-    },
-  ];
-}
 
 function StatusMessage({ status }) {
   if (status === "generating") {
@@ -60,6 +40,28 @@ function StatusMessage({ status }) {
   }
 
   return null;
+}
+
+function buildQuizPayload(quiz) {
+  return {
+    id: quiz.id,
+    title: quiz.title,
+    status: quiz.status,
+  };
+}
+
+function buildQuestionPayload(question) {
+  return {
+    id: question.id,
+    question: question.question,
+    optionA: question.optionA,
+    optionB: question.optionB,
+    optionC: question.optionC,
+    optionD: question.optionD,
+    correctOption: question.correctOption,
+    explanation: question.explanation,
+    question_order: question.question_order,
+  };
 }
 
 export default async function QuizDetailsPage({ params }) {
@@ -138,66 +140,15 @@ export default async function QuizDetailsPage({ params }) {
   }
 
   if (quiz.status === "completed" && questions.length > 0) {
+    const questionPayload = questions.map((question) => {
+      return buildQuestionPayload(question);
+    });
+
     questionContent = (
-      <div className="space-y-5">
-        {questions.map((question) => {
-          const options = getOptions(question);
-
-          return (
-            <Card key={question.id} className="glass-panel-strong rounded-[2rem]">
-              <CardHeader className="border-b border-white/8 pb-5">
-                <div className="flex items-start gap-4">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white text-sm font-semibold text-black">
-                    {question.question_order}
-                  </span>
-
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/38">
-                      Study Question
-                    </p>
-                    <CardTitle className="text-xl leading-snug">
-                      {question.question}
-                    </CardTitle>
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-5 p-6">
-                <div className="grid gap-3">
-                  {options.map((option) => {
-                    let optionClass =
-                      "rounded-2xl border border-white/8 bg-white/[0.04] p-4 text-sm leading-6 text-white/66";
-
-                    if (option.letter === question.correctOption) {
-                      optionClass =
-                        "rounded-2xl border border-emerald-400/25 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50";
-                    }
-
-                    return (
-                      <div key={option.letter} className={optionClass}>
-                        <span className="mr-2 font-semibold">
-                          {option.letter}.
-                        </span>
-                        {option.text}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                  <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-200" />
-                    Correct answer: {question.correctOption}
-                  </div>
-                  <p className="text-sm leading-7 text-white/62">
-                    {question.explanation}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      <QuizAttemptClient
+        quiz={buildQuizPayload(quiz)}
+        questions={questionPayload}
+      />
     );
   }
 

@@ -1,6 +1,19 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+const knownSectionTitles = [
+  "Overview",
+  "Learning Objectives",
+  "Core Concepts",
+  "Step-by-Step Explanation",
+  "Practical Examples",
+  "Common Mistakes",
+  "Real-World Application",
+  "Practice Tasks",
+  "Quick Self-Test",
+  "Summary",
+];
+
 const knownSectionTitleParts = [
   "overview",
   "learning objective",
@@ -37,6 +50,53 @@ function getSafeContent(content) {
   }
 
   return String(content).trim();
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getFlexibleTitlePattern(title) {
+  const titleParts = title.split(/[\s-]+/);
+  const escapedParts = titleParts.map((part) => {
+    return escapeRegExp(part);
+  });
+
+  return escapedParts.join("[\\s-]+");
+}
+
+function normalizeChapterContent(content) {
+  let normalizedContent = getSafeContent(content);
+  normalizedContent = normalizedContent.replace(/\r\n/g, "\n");
+  normalizedContent = normalizedContent.replace(/\u00a0/g, " ");
+
+  for (const title of knownSectionTitles) {
+    const titlePattern = getFlexibleTitlePattern(title);
+    const headingRegex = new RegExp(
+      `(^|\\s)((\\d{1,2})[.)]\\s+${titlePattern})(?=\\s|:|\\n|$)`,
+      "gi"
+    );
+
+    normalizedContent = normalizedContent.replace(
+      headingRegex,
+      (match, prefix, heading) => {
+        if (!prefix) {
+          return heading;
+        }
+
+        if (prefix.includes("\n")) {
+          return `${prefix}${heading}`;
+        }
+
+        return `${prefix}\n\n${heading}`;
+      }
+    );
+  }
+
+  normalizedContent = normalizedContent.replace(/([:.])\s+([-*\u2022])\s+/g, "$1\n$2 ");
+  normalizedContent = normalizedContent.replace(/\n{3,}/g, "\n\n");
+
+  return normalizedContent.trim();
 }
 
 function cleanSectionTitle(title) {
@@ -87,14 +147,58 @@ function isLikelySectionHeading(title) {
   return false;
 }
 
+function getKnownHeadingFromLine(line) {
+  for (const title of knownSectionTitles) {
+    const titlePattern = getFlexibleTitlePattern(title);
+    const headingRegex = new RegExp(
+      `^\\s*(?:#{1,6}\\s*)?(?:\\*\\*)?(\\d{1,2})[.)]\\s+(${titlePattern})(?:\\*\\*)?:?\\s*(.*)$`,
+      "i"
+    );
+
+    const headingMatch = line.match(headingRegex);
+
+    if (headingMatch) {
+      return {
+        number: headingMatch[1],
+        title: title,
+        body: headingMatch[3].trim(),
+      };
+    }
+  }
+
+  return null;
+}
+
 function parseChapterSections(content) {
-  const safeContent = getSafeContent(content);
+  const safeContent = normalizeChapterContent(content);
   const lines = safeContent.split(/\r?\n/);
   const sections = [];
   const introLines = [];
   let currentSection = null;
 
   for (const line of lines) {
+    const knownHeading = getKnownHeadingFromLine(line);
+
+    if (knownHeading) {
+      if (currentSection) {
+        currentSection.body = currentSection.lines.join("\n").trim();
+        sections.push(currentSection);
+      }
+
+      currentSection = {
+        number: knownHeading.number,
+        title: knownHeading.title,
+        lines: [],
+        body: "",
+      };
+
+      if (knownHeading.body) {
+        currentSection.lines.push(knownHeading.body);
+      }
+
+      continue;
+    }
+
     const headingMatch = line.match(/^\s*(?:#{1,6}\s*)?(?:\*\*)?(\d{1,2})[.)]\s+(.+?)(?:\*\*)?\s*$/);
 
     if (headingMatch && isLikelySectionHeading(headingMatch[2])) {
