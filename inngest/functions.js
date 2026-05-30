@@ -1,0 +1,699 @@
+import { inngest } from "./client";
+import { db } from "@/lib/db";
+import {
+  chaptersTable,
+  coursesTable,
+  examsTable,
+  flashcardsTable,
+  quizQuestionsTable,
+  quizzesTable,
+} from "@/db/schema";
+import { and, eq } from "drizzle-orm";
+import { gemini } from "@/lib/gemini";
+import { parseAiJson } from "@/lib/ai-json";
+
+function getChapterSourceText(chapters) {
+  if (!Array.isArray(chapters)) {
+    throw new Error("Chapter data was missing.");
+  }
+
+  let sourceText = "";
+
+  for (const chapter of chapters) {
+    sourceText += `Chapter ${chapter.chapter_order}: ${chapter.title}\n`;
+    sourceText += `${chapter.content}\n\n`;
+  }
+
+  return sourceText.trim();
+}
+
+function getRequiredText(value, fieldName) {
+  if (typeof value !== "string") {
+    throw new Error(`${fieldName} is missing.`);
+  }
+
+  const cleanValue = value.trim();
+
+  if (!cleanValue) {
+    throw new Error(`${fieldName} is missing.`);
+  }
+
+  return cleanValue;
+}
+
+function getOrder(value, fallbackOrder) {
+  const order = Number(value);
+
+  if (Number.isNaN(order)) {
+    return fallbackOrder;
+  }
+
+  if (order < 1) {
+    return fallbackOrder;
+  }
+
+  return order;
+}
+
+function getCorrectOption(question) {
+  let correctOption = question.correctOption;
+
+  if (!correctOption) {
+    correctOption = question.correct_option;
+  }
+
+  correctOption = String(correctOption).trim().toUpperCase();
+
+  if (correctOption === "OPTION A") {
+    correctOption = "A";
+  }
+
+  if (correctOption === "OPTIONA") {
+    correctOption = "A";
+  }
+
+  if (correctOption === "OPTION B") {
+    correctOption = "B";
+  }
+
+  if (correctOption === "OPTIONB") {
+    correctOption = "B";
+  }
+
+  if (correctOption === "OPTION C") {
+    correctOption = "C";
+  }
+
+  if (correctOption === "OPTIONC") {
+    correctOption = "C";
+  }
+
+  if (correctOption === "OPTION D") {
+    correctOption = "D";
+  }
+
+  if (correctOption === "OPTIOND") {
+    correctOption = "D";
+  }
+
+  const validOptions = ["A", "B", "C", "D"];
+
+  if (!validOptions.includes(correctOption)) {
+    throw new Error("Quiz question has an invalid correct option.");
+  }
+
+  return correctOption;
+}
+
+function buildQuizQuestionRows(parsedQuestions, quizId) {
+  if (!Array.isArray(parsedQuestions)) {
+    throw new Error("Quiz response was not an array.");
+  }
+
+  if (parsedQuestions.length === 0) {
+    throw new Error("Quiz response did not include questions.");
+  }
+
+  if (parsedQuestions.length !== 10) {
+    throw new Error("Quiz response must include exactly 10 questions.");
+  }
+
+  return parsedQuestions.map((question, index) => {
+    let questionOrder = question.question_order;
+
+    if (!questionOrder) {
+      questionOrder = question.questionOrder;
+    }
+
+    return {
+      quizId: quizId,
+      question: getRequiredText(question.question, "Question"),
+      optionA: getRequiredText(question.optionA, "Option A"),
+      optionB: getRequiredText(question.optionB, "Option B"),
+      optionC: getRequiredText(question.optionC, "Option C"),
+      optionD: getRequiredText(question.optionD, "Option D"),
+      correctOption: getCorrectOption(question),
+      explanation: getRequiredText(question.explanation, "Explanation"),
+      question_order: getOrder(questionOrder, index + 1),
+    };
+  });
+}
+
+function buildFlashcardRows(parsedFlashcards, courseId, userId) {
+  if (!Array.isArray(parsedFlashcards)) {
+    throw new Error("Flashcard response was not an array.");
+  }
+
+  if (parsedFlashcards.length === 0) {
+    throw new Error("Flashcard response did not include flashcards.");
+  }
+
+  if (parsedFlashcards.length !== 20) {
+    throw new Error("Flashcard response must include exactly 20 flashcards.");
+  }
+
+  return parsedFlashcards.map((flashcard, index) => {
+    let flashcardOrder = flashcard.flashcard_order;
+
+    if (!flashcardOrder) {
+      flashcardOrder = flashcard.flashcardOrder;
+    }
+
+    return {
+      userId: userId,
+      courseId: courseId,
+      front: getRequiredText(flashcard.front, "Flashcard front"),
+      back: getRequiredText(flashcard.back, "Flashcard back"),
+      flashcard_order: getOrder(flashcardOrder, index + 1),
+    };
+  });
+}
+
+function buildExamPayload(parsedExam) {
+  if (!parsedExam || typeof parsedExam !== "object") {
+    throw new Error("Exam response was not an object.");
+  }
+
+  let markingGuide = parsedExam.markingGuide;
+
+  if (!markingGuide) {
+    markingGuide = parsedExam.marking_guide;
+  }
+
+  return {
+    content: getRequiredText(parsedExam.content, "Exam content"),
+    markingGuide: getRequiredText(markingGuide, "Marking guide"),
+  };
+}
+
+export const testCourseGeneration = inngest.createFunction(
+  {
+    id: "test-course-generation",
+    triggers: {
+      event: "course/generate.requested",
+    },
+  },
+  async ({ event, step }) => {
+    const courseId = event.data.courseId;
+    const title = event.data.title;
+    const description = event.data.description;
+
+    await step.run("mark-course-generating", async () => {
+      await db
+        .update(coursesTable)
+        .set({
+          status: "generating",
+        })
+        .where(eq(coursesTable.id, courseId));
+    });
+
+    const chapters = await step.run("generate-ai-chapters", async () => {
+      const response = await gemini.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: `
+                    You are SyllabroAI, an elite AI course architect and expert teacher.
+
+                    Your job is to create a complete beginner-to-advanced mini-course that is clearer, deeper, and more practical than ordinary free tutorial websites.
+
+                    Course title:
+                    ${title}
+
+                    Course description:
+                    ${description}
+
+                    Create exactly 5 chapters.
+
+                    Return ONLY valid JSON.
+                    Do not include markdown fences.
+                    Do not include backticks around the JSON.
+                    Do not include any explanation outside the JSON.
+
+                    The JSON must be an array of chapter objects.
+
+                    Each chapter object must have exactly these fields:
+                    - title
+                    - chapter_order
+                    - content
+
+                    Rules for chapter_order:
+                    - Use numbers starting from 1.
+                    - Chapters must flow from beginner to advanced.
+                    - The final chapter should feel more advanced and practical.
+
+                    Rules for title:
+                    - Make it clear, professional, and specific.
+                    - Avoid vague titles like "Introduction" only.
+                    - Good example: "Understanding Variables, Data Types, and Memory in JavaScript"
+
+                    Rules for content:
+                    Each chapter content must be a well-structured learning note.
+                    Each chapter must include these sections in this exact order:
+
+                    1. Overview
+                    Explain what the chapter is about and why it matters.
+
+                    2. Learning Objectives
+                    List 4 to 6 clear objectives.
+
+                    3. Core Concepts
+                    Explain the main ideas deeply but simply.
+                    Use beginner-friendly language.
+                    Do not be shallow.
+                    Use analogies where useful.
+
+                    4. Step-by-Step Explanation
+                    Break the topic into ordered steps.
+                    Explain how a learner should think through the concept.
+
+                    5. Practical Examples
+                    If the course involves programming, include realistic code examples.
+                    If the course involves mathematics, include formulas, worked examples, and explanations of each step.
+                    If the course involves science, include diagrams described in words, real-world applications, and cause-effect reasoning.
+                    If the course involves business, include scenarios, frameworks, and decision examples.
+                    If the course involves language or writing, include examples, corrections, and practice prompts.
+
+                    6. Common Mistakes
+                    List common learner mistakes and explain how to avoid them.
+
+                    7. Real-World Application
+                    Explain where this chapter is used in real life or professional work.
+
+                    8. Practice Tasks
+                    Give 3 to 5 exercises.
+                    Start easy, then increase difficulty.
+
+                    9. Quick Self-Test
+                    Give 3 short questions the learner can answer to check understanding.
+
+                    10. Summary
+                    Summarize the chapter clearly.
+
+                    Quality rules:
+                    - Write like a patient expert teacher.
+                    - Make the content detailed and useful.
+                    - Do not write generic filler.
+                    - Do not mention that you are an AI.
+                    - Do not copy from any website, book, or platform.
+                    - Use original explanations.
+                    - If code is needed, format code clearly inside the content string.
+                    - If math is needed, show the formula, substitution, and final answer.
+                    - If the topic is advanced, still start from foundations and build upward.
+
+                    JSON format example:
+                    [
+                      {
+                        "title": "Clear Chapter Title",
+                        "chapter_order": 1,
+                        "content": "1. Overview\\n...\\n\\n2. Learning Objectives\\n...\\n\\n3. Core Concepts\\n..."
+                      }
+                    ]
+                    `,
+            });
+
+      const rawText = response.text;
+
+      let cleanedText = rawText.trim();
+
+      if (cleanedText.startsWith("```json")) {
+        cleanedText = cleanedText.replace("```json", "");
+      }
+
+      if (cleanedText.startsWith("```")) {
+        cleanedText = cleanedText.replace("```", "");
+      }
+
+      if (cleanedText.endsWith("```")) {
+        cleanedText = cleanedText.slice(0, -3);
+      }
+
+      const parsedChapters = JSON.parse(cleanedText);
+
+      if (!Array.isArray(parsedChapters)) {
+        throw new Error("Gemini did not return an array.");
+      }
+
+      return parsedChapters;
+    });
+
+    await step.run("save-ai-chapters", async () => {
+      const chapterRows = chapters.map((chapter, index) => {
+        let chapterOrder = chapter.chapter_order;
+
+        if (!chapterOrder) {
+          chapterOrder = index + 1;
+        }
+
+        return {
+          courseId: courseId,
+          title: chapter.title,
+          content: chapter.content,
+          chapter_order: chapterOrder,
+        };
+      });
+
+      await db.insert(chaptersTable).values(chapterRows);
+    });
+
+    await step.run("mark-course-completed", async () => {
+      await db
+        .update(coursesTable)
+        .set({
+          status: "completed",
+        })
+        .where(eq(coursesTable.id, courseId));
+    });
+
+    return {
+      success: true,
+      message: "AI course generation completed.",
+    };
+  }
+);
+
+export const generateQuiz = inngest.createFunction(
+  {
+    id: "generate-quiz",
+    triggers: {
+      event: "quiz/generate.requested",
+    },
+  },
+  async ({ event, step }) => {
+    const quizId = event.data.quizId;
+    const courseId = event.data.courseId;
+    const userId = event.data.userId;
+    const courseTitle = event.data.courseTitle;
+    const chapters = event.data.chapters;
+
+    try {
+      const questionRows = await step.run("generate-quiz-json", async () => {
+        const chapterSourceText = getChapterSourceText(chapters);
+
+        const response = await gemini.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: `
+            You are SyllabroAI, an expert teacher creating assessment material.
+
+            Course title:
+            ${courseTitle}
+
+            Course chapters:
+            ${chapterSourceText}
+
+            Create exactly 10 multiple-choice quiz questions.
+
+            Return ONLY valid JSON.
+            Do not include markdown fences.
+            Do not include explanations outside JSON.
+
+            The JSON must be an array.
+            Each item must have exactly:
+            - question
+            - optionA
+            - optionB
+            - optionC
+            - optionD
+            - correctOption
+            - explanation
+            - question_order
+
+            Quality rules:
+            - Test real understanding, not shallow memorization.
+            - Include beginner, intermediate, and applied questions.
+            - Make all wrong options plausible but clearly incorrect.
+            - correctOption must be A, B, C, or D.
+            - Explanations must teach why the answer is correct.
+
+            JSON example:
+            [
+              {
+                "question": "Clear question text?",
+                "optionA": "First option",
+                "optionB": "Second option",
+                "optionC": "Third option",
+                "optionD": "Fourth option",
+                "correctOption": "A",
+                "explanation": "Teaching explanation.",
+                "question_order": 1
+              }
+            ]
+          `,
+        });
+
+        const parsedQuestions = parseAiJson(response.text);
+        return buildQuizQuestionRows(parsedQuestions, quizId);
+      });
+
+      await step.run("save-quiz-questions", async () => {
+        await db
+          .delete(quizQuestionsTable)
+          .where(eq(quizQuestionsTable.quizId, quizId));
+
+        await db.insert(quizQuestionsTable).values(questionRows);
+      });
+
+      await step.run("mark-quiz-completed", async () => {
+        await db
+          .update(quizzesTable)
+          .set({
+            status: "completed",
+          })
+          .where(
+            and(
+              eq(quizzesTable.id, quizId),
+              eq(quizzesTable.userId, userId)
+            )
+          );
+      });
+
+      return {
+        success: true,
+        message: "Quiz generation completed.",
+      };
+    } catch (error) {
+      console.error("Quiz generation failed:", error);
+
+      await step.run("mark-quiz-failed", async () => {
+        await db
+          .update(quizzesTable)
+          .set({
+            status: "failed",
+          })
+          .where(
+            and(
+              eq(quizzesTable.id, quizId),
+              eq(quizzesTable.userId, userId)
+            )
+          );
+      });
+
+      return {
+        success: false,
+        message: "Quiz generation failed.",
+      };
+    }
+  }
+);
+
+export const generateFlashcards = inngest.createFunction(
+  {
+    id: "generate-flashcards",
+    triggers: {
+      event: "flashcards/generate.requested",
+    },
+  },
+  async ({ event, step }) => {
+    const courseId = event.data.courseId;
+    const userId = event.data.userId;
+    const courseTitle = event.data.courseTitle;
+    const chapters = event.data.chapters;
+
+    try {
+      const flashcardRows = await step.run("generate-flashcard-json", async () => {
+        const chapterSourceText = getChapterSourceText(chapters);
+
+        const response = await gemini.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: `
+            You are SyllabroAI, an expert teacher creating active recall material.
+
+            Course title:
+            ${courseTitle}
+
+            Course chapters:
+            ${chapterSourceText}
+
+            Create exactly 20 flashcards.
+
+            Return ONLY valid JSON.
+            Do not include markdown fences.
+            Do not include explanations outside JSON.
+
+            The JSON must be an array.
+            Each item must have exactly:
+            - front
+            - back
+            - flashcard_order
+
+            Quality rules:
+            - The front should ask a clear active recall question.
+            - The back should explain the answer clearly.
+            - Include definitions, code concepts, formulas, mistakes, comparisons, and practical knowledge where relevant.
+            - Keep each card focused on one idea.
+
+            JSON example:
+            [
+              {
+                "front": "What question should the learner answer?",
+                "back": "Clear teaching answer.",
+                "flashcard_order": 1
+              }
+            ]
+          `,
+        });
+
+        const parsedFlashcards = parseAiJson(response.text);
+        return buildFlashcardRows(parsedFlashcards, courseId, userId);
+      });
+
+      await step.run("replace-course-flashcards", async () => {
+        await db
+          .delete(flashcardsTable)
+          .where(
+            and(
+              eq(flashcardsTable.courseId, courseId),
+              eq(flashcardsTable.userId, userId)
+            )
+          );
+
+        await db.insert(flashcardsTable).values(flashcardRows);
+      });
+
+      return {
+        success: true,
+        message: "Flashcard generation completed.",
+      };
+    } catch (error) {
+      console.error("Flashcard generation failed:", error);
+
+      return {
+        success: false,
+        message: "Flashcard generation failed.",
+      };
+    }
+  }
+);
+
+export const generateExam = inngest.createFunction(
+  {
+    id: "generate-exam",
+    triggers: {
+      event: "exam/generate.requested",
+    },
+  },
+  async ({ event, step }) => {
+    const examId = event.data.examId;
+    const userId = event.data.userId;
+    const courseTitle = event.data.courseTitle;
+    const chapters = event.data.chapters;
+
+    try {
+      const examPayload = await step.run("generate-exam-json", async () => {
+        const chapterSourceText = getChapterSourceText(chapters);
+
+        const response = await gemini.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: `
+            You are SyllabroAI, an expert teacher creating serious assessment material.
+
+            Course title:
+            ${courseTitle}
+
+            Course chapters:
+            ${chapterSourceText}
+
+            Create a structured exam for this course.
+
+            Return ONLY valid JSON.
+            Do not include markdown fences.
+            Do not include explanations outside JSON.
+
+            The JSON must be one object with exactly:
+            - content
+            - markingGuide
+
+            The exam content must include:
+            - Instructions
+            - Suggested time
+            - Total marks
+            - Section A: Multiple Choice
+            - Section B: Short Answer
+            - Section C: Practical/Application Questions
+            - Section D: Advanced Challenge
+
+            The marking guide must include:
+            - correct answers
+            - expected points
+            - explanations
+            - grading notes
+
+            Quality rules:
+            - Make the exam serious and structured.
+            - Test understanding, application, and reasoning.
+            - Make the marking guide useful for self-study.
+
+            JSON example:
+            {
+              "content": "Instructions\\n...\\n\\nSection A: Multiple Choice\\n...",
+              "markingGuide": "Correct answers\\n...\\n\\nGrading notes\\n..."
+            }
+          `,
+        });
+
+        const parsedExam = parseAiJson(response.text);
+        return buildExamPayload(parsedExam);
+      });
+
+      await step.run("save-exam", async () => {
+        await db
+          .update(examsTable)
+          .set({
+            content: examPayload.content,
+            markingGuide: examPayload.markingGuide,
+            status: "completed",
+          })
+          .where(
+            and(
+              eq(examsTable.id, examId),
+              eq(examsTable.userId, userId)
+            )
+          );
+      });
+
+      return {
+        success: true,
+        message: "Exam generation completed.",
+      };
+    } catch (error) {
+      console.error("Exam generation failed:", error);
+
+      await step.run("mark-exam-failed", async () => {
+        await db
+          .update(examsTable)
+          .set({
+            status: "failed",
+          })
+          .where(
+            and(
+              eq(examsTable.id, examId),
+              eq(examsTable.userId, userId)
+            )
+          );
+      });
+
+      return {
+        success: false,
+        message: "Exam generation failed.",
+      };
+    }
+  }
+);

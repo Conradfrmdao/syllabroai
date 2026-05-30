@@ -1,7 +1,10 @@
 "use server";
 
-import { coursesTable, chaptersTable } from "@/db/schema";
+import { coursesTable } from "@/db/schema";
 import { db } from "@/lib/db";
+import { and, count, eq, gte } from "drizzle-orm";
+import { getOrCreateCurrentUser } from "@/lib/current-user";
+import { inngest } from "@/inngest/client";
 
 export async function createCourse(prevState, formData) {
   const title = formData.get("title");
@@ -38,11 +41,54 @@ export async function createCourse(prevState, formData) {
     };
   }
 
+  const appUser = await getOrCreateCurrentUser();
+
+  if (!appUser) {
+    return {
+      success: false,
+      message: "You must be signed in to create a course.",
+    };
+  }
+
+  const userId = appUser.clerkUserId;
+  const userPlan = appUser.plan;
+
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - 7);
+
+  let createdCourseId = null;
+
   try {
+    const courseCountResult = await db
+      .select({
+        total: count(),
+      })
+      .from(coursesTable)
+      .where(
+        and(
+          eq(coursesTable.userId, userId),
+          gte(coursesTable.createdAt, weekStart)
+        )
+      );
+
+    const coursesCreatedThisWeek = courseCountResult[0].total;
+
+    const freeWeeklyLimit = 2;
+
+    if (userPlan === "free") {
+      if (coursesCreatedThisWeek >= freeWeeklyLimit) {
+        return {
+          success: false,
+          message:
+            "Free users can only create 2 courses per week. Upgrade to create more.",
+        };
+      }
+    }
+
     const insertedCourses = await db
       .insert(coursesTable)
       .values({
-        userId: "temporary_user_id",
+        userId: userId,
         title: cleanTitle,
         description: cleanDescription,
         status: "pending",
@@ -60,27 +106,18 @@ export async function createCourse(prevState, formData) {
       };
     }
 
-    await db.insert(chaptersTable).values([
-      {
-        courseId: newCourse.id,
-        title: "Introduction",
-        content:
-          "This is a sample introduction chapter. AI-generated notes will come later.",
-        chapter_order: 1,
+    createdCourseId = newCourse.id;
+
+
+    await inngest.send({
+      name: "course/generate.requested",
+      data: {
+        courseId: createdCourseId,
+        userId: userId,
+        title: cleanTitle,
+        description: cleanDescription,
       },
-      {
-        courseId: newCourse.id,
-        title: "Core Concepts",
-        content: "This chapter will explain the main ideas of the course.",
-        chapter_order: 2,
-      },
-      {
-        courseId: newCourse.id,
-        title: "Practice and Revision",
-        content: "This chapter will help the learner revise and practice.",
-        chapter_order: 3,
-      },
-    ]);
+    });
   } catch (error) {
     console.error("Failed to create course:", error);
 
@@ -93,5 +130,6 @@ export async function createCourse(prevState, formData) {
   return {
     success: true,
     message: "Course and sample chapters created successfully.",
+    courseId: createdCourseId,
   };
 }

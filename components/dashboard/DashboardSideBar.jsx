@@ -21,14 +21,14 @@ const navItems = [
     icon: LayoutDashboard,
   },
   {
-    name: "Create Course",
-    href: "/dashboard/create-course",
-    icon: SquarePen,
-  },
-  {
     name: "Courses",
     href: "/dashboard/courses",
     icon: BookOpenText,
+  },
+  {
+    name: "Create Course",
+    href: "/dashboard/create-course",
+    icon: SquarePen,
   },
   {
     name: "Quizzes",

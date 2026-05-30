@@ -1,6 +1,7 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
+import { auth } from "@clerk/nextjs/server";
+import ChapterContentRenderer from "@/components/learning/ChapterContentRenderer";
 import { chaptersTable, coursesTable } from "@/db/schema";
 import { db } from "@/lib/db";
 import { and, eq } from "drizzle-orm";
@@ -19,11 +20,21 @@ export default async function ChapterDetailsPage({ params }) {
   if (Number.isNaN(chapterId)) {
     return <div>Invalid chapter ID</div>;
   }
+  const { userId } = await auth();
+
+  if (!userId) {
+    return <div>You must be signed in to view this chapter.</div>;
+  }
 
   const courseResult = await db
     .select()
     .from(coursesTable)
-    .where(eq(coursesTable.id, courseId))
+    .where(
+      and(
+        eq(coursesTable.id, courseId),
+        eq(coursesTable.userId, userId)
+      )
+    )
     .limit(1);
 
   const course = courseResult[0];
@@ -50,31 +61,44 @@ export default async function ChapterDetailsPage({ params }) {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-sm text-muted-foreground">{course.title}</p>
-        <h1 className="text-3xl font-bold">{chapter.title}</h1>
+    <div className="mx-auto w-full max-w-4xl space-y-6">
+      <div className="glass-panel-strong rounded-[2rem] p-6 sm:p-8">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-3">
+            <p className="text-sm font-medium text-white/52">{course.title}</p>
+            <h1 className="max-w-3xl text-3xl font-semibold tracking-tight text-gradient sm:text-4xl">
+              {chapter.title}
+            </h1>
 
-        <p className="text-sm text-muted-foreground">
-          Chapter {chapter.chapter_order}
-        </p>
+            <div className="flex flex-wrap items-center gap-2 text-sm text-white/54">
+              <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1">
+                Learning Notes
+              </span>
+              <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1">
+                Chapter {chapter.chapter_order}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/12 bg-white text-lg font-semibold text-black shadow-[0_18px_44px_-24px_rgba(255,255,255,0.32)]">
+            {chapter.chapter_order}
+          </div>
+        </div>
       </div>
 
-      <div className="rounded-lg border p-6">
-        <p className="leading-7">{chapter.content}</p>
-      </div>
+      <ChapterContentRenderer content={chapter.content} />
 
-      <div className="flex gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row">
         <Link
           href={`/dashboard/courses/${courseId}/chapters`}
-          className="rounded-md border px-4 py-2 text-sm"
+          className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/[0.03] px-5 py-3 text-sm font-medium text-white/78 transition-all hover:border-white/22 hover:bg-white/[0.08] hover:text-white"
         >
           Back to Chapters
         </Link>
 
         <Link
           href={`/dashboard/courses/${courseId}`}
-          className="rounded-md border px-4 py-2 text-sm"
+          className="inline-flex items-center justify-center rounded-full border border-white bg-white px-5 py-3 text-sm font-medium text-black transition-all hover:bg-white/90"
         >
           Back to Course
         </Link>

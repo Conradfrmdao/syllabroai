@@ -1,10 +1,10 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
+import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { chaptersTable, coursesTable } from "@/db/schema";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc,and } from "drizzle-orm";
 
 export default async function CourseChaptersPage({ params }) {
   const resolvedParams = await params;
@@ -14,10 +14,21 @@ export default async function CourseChaptersPage({ params }) {
     return <div>Invalid course ID</div>;
   }
 
+  const {userId} = await auth();
+
+  if(!userId){
+    return <div>You must be signed in to view chapters.</div>;
+  }
+
   const courseResult = await db
     .select()
     .from(coursesTable)
-    .where(eq(coursesTable.id, courseId))
+    .where(
+      and(
+        eq(coursesTable.id, courseId),
+        eq(coursesTable.userId, userId)
+      )
+    )
     .limit(1);
 
   const course = courseResult[0];
