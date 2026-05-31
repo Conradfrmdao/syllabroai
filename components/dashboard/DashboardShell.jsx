@@ -15,7 +15,7 @@ export default function DashboardShell({ children }) {
         <div className="relative flex min-h-screen w-full min-w-0 flex-col">
           <DashboardTopbar />
 
-          <main className="w-full flex-1 px-4 pb-32 pt-4 sm:px-6 lg:px-8 lg:pb-8">
+          <main className="w-full flex-1 px-4 pb-[calc(env(safe-area-inset-bottom)+7.75rem)] pt-3 sm:px-6 sm:pt-4 lg:px-8 lg:pb-8">
             <div className="w-full min-w-0">{children}</div>
           </main>
         </div>

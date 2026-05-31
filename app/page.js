@@ -205,21 +205,21 @@ function SectionHeading({ badge, title, body }) {
 export default function HomePage() {
   return (
     <main className="relative min-h-screen bg-black text-white">
-      <header className="fixed left-1/2 top-5 z-50 w-[calc(100%-2rem)] max-w-5xl -translate-x-1/2 rounded-full border border-white/10 bg-[#1f1f1f57] px-4 py-3 backdrop-blur-xl">
-        <div className="flex w-full items-center justify-between gap-5">
+      <header className="fixed left-1/2 top-3 z-50 w-[calc(100%-1rem)] max-w-5xl -translate-x-1/2 rounded-full border border-white/10 bg-[#1f1f1f57] px-3 py-2.5 backdrop-blur-xl sm:top-5 sm:w-[calc(100%-2rem)] sm:px-4 sm:py-3">
+        <div className="flex w-full items-center justify-between gap-2 sm:gap-5">
           <Link
             href="/"
-            className="inline-flex items-center gap-3 text-lg font-semibold tracking-[-0.03em] text-white"
+            className="inline-flex min-w-0 items-center gap-2 text-base font-semibold tracking-[-0.03em] text-white sm:gap-3 sm:text-lg"
           >
             <Image
               src="/syllabro-icon.png"
               alt="SyllabroAI logo"
               width={36}
               height={36}
-              className="h-9 w-9 object-contain"
+              className="h-8 w-8 object-contain sm:h-9 sm:w-9"
               priority
             />
-            <span>SyllabroAI</span>
+            <span className="truncate">SyllabroAI</span>
           </Link>
 
           <nav className="hidden items-center gap-6 md:flex">
@@ -234,18 +234,18 @@ export default function HomePage() {
             ))}
           </nav>
 
-          <div className="flex items-center gap-3">
-            <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+            <Button asChild variant="ghost" size="sm" className="px-2 text-xs sm:px-3 sm:text-[0.8rem]">
               <Link href="/sign-in">Sign In</Link>
             </Button>
-            <Button asChild size="sm">
+            <Button asChild size="sm" className="px-3 text-xs sm:px-3 sm:text-[0.8rem]">
               <Link href="/sign-up">Get Started</Link>
             </Button>
           </div>
         </div>
       </header>
 
-      <div className="h-16" />
+      <div className="h-12 sm:h-16" />
 
       <HeroGeometric
         badge="Built for students, self-learners, tutors, and modern schools."
@@ -255,21 +255,21 @@ export default function HomePage() {
         trustLine="Built for students, self-learners, tutors, and modern schools."
       />
 
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-24 px-5 py-24 sm:px-8 lg:px-10">
-        <section id="features" className="space-y-10">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-14 px-4 py-14 sm:px-8 sm:py-20 lg:gap-24 lg:px-10 lg:py-24">
+        <section id="features" className="space-y-6 sm:space-y-10">
           <SectionHeading
             badge="The solution"
             title="Your personal AI course builder"
             body="Describe what you want to learn, and SyllabroAI builds a structured course for you. It breaks the topic into chapters, writes detailed notes, creates revision tools, and helps you test your understanding."
           />
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-3">
             {solutionCards.map((item) => {
               const Icon = item.icon;
 
               return (
-                <Card key={item.title} className="min-h-44">
-                  <CardHeader className="space-y-4">
+                <Card key={item.title} className="min-h-0 md:min-h-44">
+                  <CardHeader className="space-y-3 md:space-y-4">
                     <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05]">
                       <Icon className="h-5 w-5 text-white" />
                     </div>
@@ -286,17 +286,17 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="how-it-works" className="space-y-10">
+        <section id="how-it-works" className="space-y-6 sm:space-y-10">
           <SectionHeading
             badge="How it works"
             title="From idea to full course in minutes"
             body="SyllabroAI turns a simple learning request into an organized, saved, and practice-ready course flow."
           />
 
-          <div className="grid gap-4 lg:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-2 md:gap-4 lg:grid-cols-5">
             {workflowSteps.map((item) => (
-              <Card key={item.step} className="min-h-56">
-                <CardHeader className="space-y-5">
+              <Card key={item.step} className="min-h-0 lg:min-h-56">
+                <CardHeader className="space-y-3 md:space-y-5">
                   <div className="text-xs uppercase tracking-[0.28em] text-white/34">
                     Step {item.step}
                   </div>
@@ -310,7 +310,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="space-y-10">
+        <section className="space-y-6 sm:space-y-10">
           <SectionHeading
             badge="Everything included"
             title="Everything you need to learn deeply"
@@ -330,7 +330,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="space-y-10">
+        <section className="space-y-6 sm:space-y-10">
           <SectionHeading
             badge="Use cases"
             title="Built for different kinds of learners"
@@ -351,7 +351,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="pricing" className="space-y-10">
+        <section id="pricing" className="space-y-6 sm:space-y-10">
           <SectionHeading
             badge="Pricing"
             title="Simple plans for serious learning"
@@ -390,7 +390,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+        <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:gap-8">
           <div className="space-y-5">
             <Badge variant="secondary">Security</Badge>
             <h2 className="text-3xl font-semibold tracking-[-0.03em] text-white sm:text-4xl">
@@ -422,7 +422,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="faq" className="space-y-10">
+        <section id="faq" className="space-y-6 sm:space-y-10">
           <SectionHeading
             badge="FAQ"
             title="Questions people ask before they start"

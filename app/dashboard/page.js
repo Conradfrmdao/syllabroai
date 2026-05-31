@@ -34,26 +34,26 @@ function getTotal(result) {
 
 function MetricCard({ label, value, detail, featured = false }) {
   let cardClassName =
-    "relative overflow-hidden rounded-[2rem] border border-white/14 bg-[linear-gradient(135deg,rgba(255,255,255,0.09),rgba(255,255,255,0.025)_45%,rgba(0,0,0,0.22))] shadow-[0_26px_80px_-54px_rgba(255,255,255,0.22)]";
-  let valueClassName = "text-3xl font-semibold tracking-tight text-white";
-  let detailClassName = "text-xs leading-5 text-white/42";
+    "relative overflow-hidden rounded-[1.35rem] border border-white/14 bg-[linear-gradient(135deg,rgba(14,165,233,0.11),rgba(255,255,255,0.055)_42%,rgba(0,0,0,0.26))] py-3 shadow-[0_22px_70px_-52px_rgba(56,189,248,0.28)] sm:rounded-[2rem] sm:py-4";
+  let valueClassName = "text-2xl font-semibold tracking-tight text-white sm:text-3xl";
+  let detailClassName = "text-[0.68rem] leading-4 text-white/46 sm:text-xs sm:leading-5";
 
   if (featured) {
     cardClassName =
-      "dot-matrix relative overflow-hidden rounded-[2rem] border border-white/16 bg-[linear-gradient(135deg,rgba(14,165,233,0.13),rgba(255,255,255,0.055)_34%,rgba(0,0,0,0.28))] shadow-[0_30px_100px_-58px_rgba(56,189,248,0.45)] md:col-span-2 xl:col-span-4";
-    valueClassName = "text-5xl font-semibold tracking-tight text-white sm:text-6xl";
-    detailClassName = "text-sm leading-6 text-white/50";
+      "dot-matrix relative col-span-2 overflow-hidden rounded-[1.35rem] border border-white/16 bg-[linear-gradient(135deg,rgba(14,165,233,0.18),rgba(255,255,255,0.07)_34%,rgba(0,0,0,0.3))] py-4 shadow-[0_30px_100px_-58px_rgba(56,189,248,0.45)] sm:rounded-[2rem] sm:py-5 md:col-span-2 xl:col-span-4";
+    valueClassName = "text-4xl font-semibold tracking-tight text-white sm:text-6xl";
+    detailClassName = "text-xs leading-5 text-white/52 sm:text-sm sm:leading-6";
   }
 
   return (
     <Card className={cardClassName}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-xs font-medium uppercase tracking-[0.2em] text-white/44">
+      <CardHeader className="px-3 pb-1 sm:px-5 sm:pb-2">
+        <CardTitle className="text-[0.62rem] font-medium uppercase tracking-[0.14em] text-white/48 sm:text-xs sm:tracking-[0.2em]">
           {label}
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="space-y-1">
+      <CardContent className="space-y-1 px-3 pb-0 sm:px-5">
         <p className={valueClassName}>{value}</p>
         <p className={detailClassName}>{detail}</p>
       </CardContent>
@@ -186,7 +186,7 @@ export default async function DashboardPage() {
 
   if (!errorMessage) {
     content = (
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-4">
         <MetricCard
           label="Courses Created"
           value={totalCourses}
@@ -240,9 +240,9 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3 sm:space-y-5">
       <section className="flex justify-end">
-        <Button asChild>
+        <Button asChild size="sm" className="sm:h-10 sm:px-4">
           <Link href="/dashboard/create-course">Create Course</Link>
         </Button>
       </section>
