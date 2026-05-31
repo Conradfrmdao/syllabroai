@@ -121,8 +121,14 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
   body {
     @apply bg-background text-foreground;
+    overflow-wrap: break-word;
     background-image:
       radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.07), transparent 28%),
       radial-gradient(circle at 12% 16%, rgba(14, 165, 233, 0.08), transparent 22%),
@@ -131,6 +137,20 @@
   }
   html {
     @apply font-sans;
+  }
+  img,
+  video,
+  canvas,
+  svg {
+    max-width: 100%;
+  }
+  pre {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  pre code {
+    overflow-wrap: normal;
+    word-break: normal;
   }
 }
 

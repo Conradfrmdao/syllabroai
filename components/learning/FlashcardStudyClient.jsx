@@ -58,7 +58,7 @@ export default function FlashcardStudyClient({ flashcards }) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 sm:space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-white/52">
           Card {cardNumber} of {totalCards}
@@ -78,15 +78,15 @@ export default function FlashcardStudyClient({ flashcards }) {
       <button
         type="button"
         onClick={handleFlip}
-        className="min-h-[20rem] w-full rounded-[2rem] border border-white/12 bg-white/[0.05] p-8 text-left shadow-[0_28px_90px_-44px_rgba(0,0,0,1)] transition hover:bg-white/[0.07]"
+        className="min-h-[14rem] w-full rounded-[1.35rem] border border-white/12 bg-white/[0.05] p-5 text-left shadow-[0_28px_90px_-44px_rgba(0,0,0,1)] transition hover:bg-white/[0.07] sm:min-h-[20rem] sm:rounded-[2rem] sm:p-8"
       >
-        <p className="text-xs font-medium uppercase tracking-[0.22em] text-white/38">
+        <p className="text-[0.68rem] font-medium uppercase tracking-[0.18em] text-white/38 sm:text-xs sm:tracking-[0.22em]">
           {cardLabel}
         </p>
-        <p className="mt-6 text-2xl font-semibold leading-relaxed text-white sm:text-3xl">
+        <p className="mt-4 break-words text-xl font-semibold leading-8 text-white sm:mt-6 sm:text-3xl sm:leading-relaxed">
           {cardText}
         </p>
-        <p className="mt-8 text-sm text-white/42">
+        <p className="mt-5 text-sm text-white/42 sm:mt-8">
           Click the card to reveal the other side.
         </p>
       </button>

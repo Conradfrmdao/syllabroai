@@ -26,9 +26,9 @@ const EXAM_STALE_MINUTES = 10;
 function StatusContent({ status, courseId }) {
   if (status === "generating") {
     return (
-      <Card className="glass-panel-strong rounded-[2rem]">
-        <CardContent className="p-6 sm:p-8">
-          <p className="text-sm leading-7 text-white/62">
+      <Card className="glass-panel-strong rounded-[1.35rem] sm:rounded-[2rem]">
+        <CardContent className="p-4 sm:p-8">
+          <p className="text-sm leading-6 text-white/62 sm:leading-7">
             Exam is still generating. Refresh in a moment.
           </p>
         </CardContent>
@@ -38,9 +38,9 @@ function StatusContent({ status, courseId }) {
 
   if (status === "failed") {
     return (
-      <Card className="glass-panel-strong rounded-[2rem]">
-        <CardContent className="space-y-5 p-6 sm:p-8">
-          <p className="text-sm leading-7 text-rose-100">
+      <Card className="glass-panel-strong rounded-[1.35rem] sm:rounded-[2rem]">
+        <CardContent className="space-y-4 p-4 sm:space-y-5 sm:p-8">
+          <p className="text-sm leading-6 text-rose-100 sm:leading-7">
             Exam generation failed or took too long. Please go back to the
             course and try again.
           </p>
@@ -236,7 +236,7 @@ export default async function ExamDetailsPage({ params }) {
   }
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full min-w-0 space-y-4 sm:space-y-6">
       <div className="space-y-3">
         <Badge variant="secondary" className="w-fit">
           <GraduationCap className="h-3.5 w-3.5" />
@@ -244,7 +244,7 @@ export default async function ExamDetailsPage({ params }) {
         </Badge>
 
         <div className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+          <h1 className="break-words text-2xl font-semibold tracking-tight text-white sm:text-4xl">
             {exam.title}
           </h1>
           <p className="text-sm text-white/52">Status: {exam.status}</p>

@@ -140,18 +140,18 @@ export default function MobileBottomNav() {
         </div>
       )}
 
-      <nav className="mx-auto flex h-[4.45rem] max-w-md items-center justify-between rounded-[1.55rem] border border-white/10 bg-[#151515]/86 p-1.5 shadow-[0_22px_70px_-36px_rgba(0,0,0,1)] backdrop-blur-2xl">
+      <nav className="mx-auto flex h-[4.15rem] max-w-md items-center justify-between rounded-[1.45rem] border border-white/10 bg-[#151515]/86 p-1 shadow-[0_22px_70px_-36px_rgba(0,0,0,1)] backdrop-blur-2xl">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = isActivePath(pathname, item);
           let itemClass =
-            "flex h-full min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[1.15rem] px-1 text-[0.66rem] font-medium text-white/48 transition";
-          let iconClass = "h-4 w-4 text-white/48";
+            "flex h-full min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[1.05rem] px-1 text-[0.64rem] font-medium text-white/48 transition";
+          let iconClass = "h-3.5 w-3.5 text-white/48";
 
           if (isActive) {
             itemClass =
-              "flex h-full min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[1.15rem] border border-sky-300/18 bg-[linear-gradient(135deg,rgba(14,165,233,0.2),rgba(255,255,255,0.08))] px-1 text-[0.66rem] font-semibold text-white shadow-[0_14px_36px_-26px_rgba(56,189,248,0.48)] transition";
-            iconClass = "h-4 w-4 text-white";
+              "flex h-full min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[1.05rem] border border-sky-300/18 bg-[linear-gradient(135deg,rgba(14,165,233,0.2),rgba(255,255,255,0.08))] px-1 text-[0.64rem] font-semibold text-white shadow-[0_14px_36px_-26px_rgba(56,189,248,0.48)] transition";
+            iconClass = "h-3.5 w-3.5 text-white";
           }
 
           if (item.match === "more") {

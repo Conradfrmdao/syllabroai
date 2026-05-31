@@ -190,21 +190,21 @@ const faqs = [
 
 function SectionHeading({ badge, title, body }) {
   return (
-    <div className="mx-auto max-w-3xl space-y-4 text-center">
+    <div className="mx-auto max-w-3xl space-y-3 text-center sm:space-y-4">
       <Badge variant="secondary" className="w-fit mx-auto">
         {badge}
       </Badge>
-      <h2 className="text-3xl font-semibold tracking-[-0.03em] text-white sm:text-4xl">
+      <h2 className="text-2xl font-semibold tracking-[-0.03em] text-white sm:text-4xl">
         {title}
       </h2>
-      <p className="text-base leading-8 text-white/58 sm:text-lg">{body}</p>
+      <p className="text-sm leading-6 text-white/58 sm:text-lg sm:leading-8">{body}</p>
     </div>
   );
 }
 
 export default function HomePage() {
   return (
-    <main className="relative min-h-screen bg-black text-white">
+    <main className="relative min-h-screen w-full max-w-full overflow-x-hidden bg-black text-white">
       <header className="fixed left-1/2 top-3 z-50 w-[calc(100%-1rem)] max-w-5xl -translate-x-1/2 rounded-full border border-white/10 bg-[#1f1f1f57] px-3 py-2.5 backdrop-blur-xl sm:top-5 sm:w-[calc(100%-2rem)] sm:px-4 sm:py-3">
         <div className="flex w-full items-center justify-between gap-2 sm:gap-5">
           <Link
@@ -255,7 +255,7 @@ export default function HomePage() {
         trustLine="Built for students, self-learners, tutors, and modern schools."
       />
 
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-14 px-4 py-14 sm:px-8 sm:py-20 lg:gap-24 lg:px-10 lg:py-24">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-12 px-4 py-12 sm:px-8 sm:py-20 lg:gap-24 lg:px-10 lg:py-24">
         <section id="features" className="space-y-6 sm:space-y-10">
           <SectionHeading
             badge="The solution"
@@ -268,15 +268,15 @@ export default function HomePage() {
               const Icon = item.icon;
 
               return (
-                <Card key={item.title} className="min-h-0 md:min-h-44">
-                  <CardHeader className="space-y-3 md:space-y-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05]">
-                      <Icon className="h-5 w-5 text-white" />
+                <Card key={item.title} className="min-h-0 rounded-[1.35rem] py-3 md:min-h-44 md:rounded-[1.75rem] md:py-4">
+                  <CardHeader className="space-y-3 px-4 md:space-y-4 md:px-5">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] md:h-12 md:w-12 md:rounded-2xl">
+                      <Icon className="h-4 w-4 text-white md:h-5 md:w-5" />
                     </div>
-                    <CardTitle className="text-xl">{item.title}</CardTitle>
+                    <CardTitle className="text-base md:text-xl">{item.title}</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <CardDescription className="leading-7">
+                  <CardContent className="px-4 md:px-5">
+                    <CardDescription className="text-sm leading-6 md:leading-7">
                       Structured for focused learning and real revision, not just short summaries.
                     </CardDescription>
                   </CardContent>
@@ -295,15 +295,15 @@ export default function HomePage() {
 
           <div className="grid gap-3 sm:grid-cols-2 md:gap-4 lg:grid-cols-5">
             {workflowSteps.map((item) => (
-              <Card key={item.step} className="min-h-0 lg:min-h-56">
-                <CardHeader className="space-y-3 md:space-y-5">
-                  <div className="text-xs uppercase tracking-[0.28em] text-white/34">
+              <Card key={item.step} className="min-h-0 rounded-[1.35rem] py-3 lg:min-h-56 lg:rounded-[1.75rem] lg:py-4">
+                <CardHeader className="space-y-3 px-4 md:space-y-5 md:px-5">
+                  <div className="text-[0.68rem] uppercase tracking-[0.2em] text-white/34 md:text-xs md:tracking-[0.28em]">
                     Step {item.step}
                   </div>
-                  <CardTitle className="text-xl">{item.title}</CardTitle>
+                  <CardTitle className="text-base md:text-xl">{item.title}</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm leading-7 text-white/58">{item.body}</p>
+                <CardContent className="px-4 md:px-5">
+                  <p className="text-sm leading-6 text-white/58 md:leading-7">{item.body}</p>
                 </CardContent>
               </Card>
             ))}
@@ -321,10 +321,10 @@ export default function HomePage() {
             {featureList.map((item) => (
               <div
                 key={item}
-                className="glass-panel flex items-start gap-3 rounded-[1.5rem] px-5 py-4"
+                className="glass-panel flex items-start gap-2.5 rounded-2xl px-3 py-2.5 sm:gap-3 sm:rounded-[1.5rem] sm:px-5 sm:py-4"
               >
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-white" />
-                <p className="text-sm leading-7 text-white/74">{item}</p>
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-white sm:h-5 sm:w-5" />
+                <p className="text-sm leading-5 text-white/74 sm:leading-7">{item}</p>
               </div>
             ))}
           </div>
@@ -337,14 +337,14 @@ export default function HomePage() {
             body="SyllabroAI is flexible enough for individual study, tutoring workflows, and structured classroom support."
           />
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-4">
             {useCases.map((item) => (
-              <Card key={item.title} className="min-h-52">
-                <CardHeader className="space-y-4">
-                  <CardTitle className="text-xl">{item.title}</CardTitle>
+              <Card key={item.title} className="min-h-0 rounded-[1.35rem] py-3 md:min-h-52 md:rounded-[1.75rem] md:py-4">
+                <CardHeader className="space-y-3 px-4 md:space-y-4 md:px-5">
+                  <CardTitle className="text-base md:text-xl">{item.title}</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm leading-7 text-white/58">{item.body}</p>
+                <CardContent className="px-4 md:px-5">
+                  <p className="text-sm leading-6 text-white/58 md:leading-7">{item.body}</p>
                 </CardContent>
               </Card>
             ))}
@@ -358,24 +358,24 @@ export default function HomePage() {
             body="Pricing is built for learners, professionals, and schools that need structured AI-generated study material."
           />
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-4">
             {pricingTiers.map((tier) => (
               <Card
                 key={tier.name}
                 className={tier.featured ? "glass-panel-strong ring-1 ring-white/16" : ""}
               >
-                <CardHeader className="space-y-3 border-b border-white/8 pb-6">
-                  <CardTitle className="text-2xl">{tier.name}</CardTitle>
-                  <p className="text-4xl font-semibold tracking-[-0.04em] text-white">
+                <CardHeader className="space-y-2 border-b border-white/8 px-4 pb-4 md:space-y-3 md:px-5 md:pb-6">
+                  <CardTitle className="text-xl md:text-2xl">{tier.name}</CardTitle>
+                  <p className="text-3xl font-semibold tracking-[-0.04em] text-white md:text-4xl">
                     {tier.price}
                   </p>
                   <CardDescription>{tier.description}</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4 p-6">
+                <CardContent className="space-y-3 p-4 md:space-y-4 md:p-6">
                   {tier.points.map((item) => (
                     <div key={item} className="flex items-start gap-3">
                       <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-white" />
-                      <p className="text-sm leading-7 text-white/72">{item}</p>
+                      <p className="text-sm leading-6 text-white/72 md:leading-7">{item}</p>
                     </div>
                   ))}
                 </CardContent>
@@ -393,29 +393,29 @@ export default function HomePage() {
         <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:gap-8">
           <div className="space-y-5">
             <Badge variant="secondary">Security</Badge>
-            <h2 className="text-3xl font-semibold tracking-[-0.03em] text-white sm:text-4xl">
+            <h2 className="text-2xl font-semibold tracking-[-0.03em] text-white sm:text-4xl">
               Your learning data stays private
             </h2>
-            <p className="text-base leading-8 text-white/58 sm:text-lg">
+            <p className="text-sm leading-6 text-white/58 sm:text-lg sm:leading-8">
               Each user has a secure account. Courses are linked to the
               logged-in user, and users can only access their own learning material.
             </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
             {securityPoints.map((item) => (
-              <Card key={item}>
-                <CardHeader className="space-y-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05]">
+              <Card key={item} className="rounded-[1.35rem] py-3 md:rounded-[1.75rem] md:py-4">
+                <CardHeader className="space-y-3 px-4 md:space-y-4 md:px-5">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] md:h-12 md:w-12 md:rounded-2xl">
                     {item.includes("Secure") || item.includes("Protected") ? (
-                      <ShieldCheck className="h-5 w-5 text-white" />
+                      <ShieldCheck className="h-4 w-4 text-white md:h-5 md:w-5" />
                     ) : item.includes("Private") ? (
-                      <LayoutDashboard className="h-5 w-5 text-white" />
+                      <LayoutDashboard className="h-4 w-4 text-white md:h-5 md:w-5" />
                     ) : (
-                      <Lock className="h-5 w-5 text-white" />
+                      <Lock className="h-4 w-4 text-white md:h-5 md:w-5" />
                     )}
                   </div>
-                  <CardTitle className="text-xl">{item}</CardTitle>
+                  <CardTitle className="text-base md:text-xl">{item}</CardTitle>
                 </CardHeader>
               </Card>
             ))}
@@ -429,14 +429,14 @@ export default function HomePage() {
             body="A quick overview of how SyllabroAI works, who it is for, and what you can expect from the platform."
           />
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
             {faqs.map((item) => (
-              <Card key={item.question}>
-                <CardHeader className="space-y-3">
-                  <CardTitle className="text-xl">{item.question}</CardTitle>
+              <Card key={item.question} className="rounded-[1.35rem] py-3 md:rounded-[1.75rem] md:py-4">
+                <CardHeader className="space-y-2 px-4 md:space-y-3 md:px-5">
+                  <CardTitle className="text-base md:text-xl">{item.question}</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm leading-7 text-white/58">{item.answer}</p>
+                <CardContent className="px-4 md:px-5">
+                  <p className="text-sm leading-6 text-white/58 md:leading-7">{item.answer}</p>
                 </CardContent>
               </Card>
             ))}
@@ -445,21 +445,21 @@ export default function HomePage() {
 
         <section className="pb-4">
           <Card className="glass-panel-strong">
-            <CardContent className="flex flex-col gap-8 px-6 py-8 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
+            <CardContent className="flex flex-col gap-5 px-4 py-6 sm:gap-8 sm:px-8 sm:py-8 lg:flex-row lg:items-center lg:justify-between">
               <div className="space-y-4">
                 <Badge variant="secondary">Final call to action</Badge>
                 <div className="space-y-3">
-                  <h2 className="text-3xl font-semibold tracking-[-0.03em] text-white sm:text-4xl">
+                  <h2 className="text-2xl font-semibold tracking-[-0.03em] text-white sm:text-4xl">
                     Ready to build your next course?
                   </h2>
-                  <p className="max-w-2xl text-base leading-8 text-white/58">
+                  <p className="max-w-2xl text-sm leading-6 text-white/58 sm:text-base sm:leading-8">
                     Describe what you want to learn and let SyllabroAI turn it
                     into a structured learning experience.
                   </p>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-col gap-3 min-[390px]:flex-row min-[390px]:flex-wrap">
                 <Button asChild size="lg">
                   <Link href="/sign-up">
                     Get Started Free

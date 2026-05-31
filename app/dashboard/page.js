@@ -32,24 +32,31 @@ function getTotal(result) {
   return Number(firstRow.total);
 }
 
-function MetricCard({ label, value, detail, featured = false }) {
+function MetricCard({ label, mobileLabel = "", value, detail, featured = false }) {
   let cardClassName =
-    "relative overflow-hidden rounded-[1.35rem] border border-white/14 bg-[linear-gradient(135deg,rgba(14,165,233,0.11),rgba(255,255,255,0.055)_42%,rgba(0,0,0,0.26))] py-3 shadow-[0_22px_70px_-52px_rgba(56,189,248,0.28)] sm:rounded-[2rem] sm:py-4";
+    "relative overflow-hidden rounded-[1.15rem] border border-white/14 bg-[linear-gradient(135deg,rgba(14,165,233,0.11),rgba(255,255,255,0.055)_42%,rgba(0,0,0,0.26))] py-2.5 shadow-[0_22px_70px_-52px_rgba(56,189,248,0.28)] sm:rounded-[2rem] sm:py-4";
   let valueClassName = "text-2xl font-semibold tracking-tight text-white sm:text-3xl";
   let detailClassName = "text-[0.68rem] leading-4 text-white/46 sm:text-xs sm:leading-5";
 
   if (featured) {
     cardClassName =
-      "dot-matrix relative col-span-2 overflow-hidden rounded-[1.35rem] border border-white/16 bg-[linear-gradient(135deg,rgba(14,165,233,0.18),rgba(255,255,255,0.07)_34%,rgba(0,0,0,0.3))] py-4 shadow-[0_30px_100px_-58px_rgba(56,189,248,0.45)] sm:rounded-[2rem] sm:py-5 md:col-span-2 xl:col-span-4";
-    valueClassName = "text-4xl font-semibold tracking-tight text-white sm:text-6xl";
+      "dot-matrix relative col-span-2 overflow-hidden rounded-[1.15rem] border border-white/16 bg-[linear-gradient(135deg,rgba(14,165,233,0.18),rgba(255,255,255,0.07)_34%,rgba(0,0,0,0.3))] py-3 shadow-[0_30px_100px_-58px_rgba(56,189,248,0.45)] sm:rounded-[2rem] sm:py-5 md:col-span-2 xl:col-span-4";
+    valueClassName = "text-3xl font-semibold tracking-tight text-white sm:text-6xl";
     detailClassName = "text-xs leading-5 text-white/52 sm:text-sm sm:leading-6";
+  }
+
+  let compactLabel = label;
+
+  if (mobileLabel) {
+    compactLabel = mobileLabel;
   }
 
   return (
     <Card className={cardClassName}>
-      <CardHeader className="px-3 pb-1 sm:px-5 sm:pb-2">
-        <CardTitle className="text-[0.62rem] font-medium uppercase tracking-[0.14em] text-white/48 sm:text-xs sm:tracking-[0.2em]">
-          {label}
+      <CardHeader className="px-3 pb-0 sm:px-5 sm:pb-2">
+        <CardTitle className="text-[0.58rem] font-medium uppercase tracking-[0.12em] text-white/48 sm:text-xs sm:tracking-[0.2em]">
+          <span className="sm:hidden">{compactLabel}</span>
+          <span className="hidden sm:inline">{label}</span>
         </CardTitle>
       </CardHeader>
 
@@ -189,6 +196,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-4">
         <MetricCard
           label="Courses Created"
+          mobileLabel="Courses"
           value={totalCourses}
           detail="Saved learning paths"
           featured={true}
@@ -196,42 +204,49 @@ export default async function DashboardPage() {
 
         <MetricCard
           label="Courses This Week"
+          mobileLabel="This Week"
           value={coursesThisWeek}
           detail={limitText}
         />
 
         <MetricCard
           label="Remaining Courses"
+          mobileLabel="Remaining"
           value={remainingCourses}
           detail="Available on your current plan"
         />
 
         <MetricCard
           label="Quizzes Ready"
+          mobileLabel="Quizzes"
           value={totalQuizzes}
           detail="Generated quiz sets"
         />
 
         <MetricCard
           label="Quiz Questions"
+          mobileLabel="Questions"
           value={totalQuizQuestions}
           detail="Practice questions available"
         />
 
         <MetricCard
           label="Flashcards Ready"
+          mobileLabel="Cards"
           value={totalFlashcards}
           detail="Active recall cards"
         />
 
         <MetricCard
           label="Exams Ready"
+          mobileLabel="Exams"
           value={totalExams}
           detail="Structured exams generated"
         />
 
         <MetricCard
           label="Study Materials"
+          mobileLabel="Materials"
           value={totalStudyMaterials}
           detail="Quizzes, flashcards, and exams"
         />

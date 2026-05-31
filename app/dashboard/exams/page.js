@@ -192,21 +192,21 @@ export default async function ExamsPage() {
 
   if (!errorMessage && exams.length === 0) {
     content = (
-      <Card className="glass-panel-strong rounded-[2rem]">
-        <CardContent className="p-6 sm:p-8">
-          <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.04] p-6">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+      <Card className="glass-panel-strong rounded-[1.35rem] sm:rounded-[2rem]">
+        <CardContent className="p-4 sm:p-8">
+          <div className="rounded-[1.2rem] border border-white/10 bg-white/[0.04] p-4 sm:rounded-[1.75rem] sm:p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="space-y-2">
                 <p className="text-lg font-semibold text-white">
                   No exams generated yet.
                 </p>
-                <p className="max-w-xl text-sm leading-7 text-white/56">
+                <p className="max-w-xl text-sm leading-6 text-white/56 sm:leading-7">
                   Open a saved course and generate a structured exam when you
                   are ready to test yourself.
                 </p>
               </div>
 
-              <Button asChild size="lg">
+              <Button asChild>
                 <Link href="/dashboard/courses?generate=exam">
                   Choose Course
                   <ArrowRight className="h-4 w-4" />
@@ -221,15 +221,15 @@ export default async function ExamsPage() {
 
   if (!errorMessage && exams.length > 0) {
     content = (
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
         {exams.map((exam) => (
-          <Card key={exam.id} className="glass-panel-strong rounded-[2rem]">
-            <CardHeader className="space-y-3 border-b border-white/8 pb-5">
+          <Card key={exam.id} className="glass-panel-strong rounded-[1.35rem] py-3 sm:rounded-[2rem] sm:py-4">
+            <CardHeader className="space-y-3 border-b border-white/8 px-4 pb-4 sm:px-5 sm:pb-5">
               <StatusBadge status={exam.status} />
-              <CardTitle className="text-2xl">{exam.title}</CardTitle>
+              <CardTitle className="break-words text-lg sm:text-2xl">{exam.title}</CardTitle>
             </CardHeader>
 
-            <CardContent className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between">
+            <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <p className="text-sm text-white/52">
                 Created {formatDate(exam.createdAt)}
               </p>
@@ -253,8 +253,8 @@ export default async function ExamsPage() {
   }
 
   return (
-    <div className="w-full space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div className="w-full min-w-0 space-y-4 sm:space-y-6">
+      <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
           <Badge variant="secondary" className="w-fit">
             <GraduationCap className="h-3.5 w-3.5" />
@@ -262,10 +262,10 @@ export default async function ExamsPage() {
           </Badge>
 
           <div className="space-y-2">
-            <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+            <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-4xl">
               Exams
             </h1>
-            <p className="max-w-2xl text-sm leading-7 text-white/58 sm:text-base">
+            <p className="max-w-2xl text-sm leading-6 text-white/58 sm:text-base sm:leading-7">
               Generate structured exams from full course content when you are
               ready to test yourself.
             </p>

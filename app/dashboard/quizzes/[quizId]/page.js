@@ -18,9 +18,9 @@ import { safelyMarkStaleGenerationJobs } from "@/lib/generation-jobs";
 function StatusMessage({ status }) {
   if (status === "generating") {
     return (
-      <Card className="glass-panel-strong rounded-[2rem]">
-        <CardContent className="p-6 sm:p-8">
-          <p className="text-sm leading-7 text-white/62">
+      <Card className="glass-panel-strong rounded-[1.35rem] sm:rounded-[2rem]">
+        <CardContent className="p-4 sm:p-8">
+          <p className="text-sm leading-6 text-white/62 sm:leading-7">
             Quiz is still generating. Refresh in a moment.
           </p>
         </CardContent>
@@ -30,9 +30,9 @@ function StatusMessage({ status }) {
 
   if (status === "failed") {
     return (
-      <Card className="glass-panel-strong rounded-[2rem]">
-        <CardContent className="p-6 sm:p-8">
-          <p className="text-sm leading-7 text-rose-100">
+      <Card className="glass-panel-strong rounded-[1.35rem] sm:rounded-[2rem]">
+        <CardContent className="p-4 sm:p-8">
+          <p className="text-sm leading-6 text-rose-100 sm:leading-7">
             Quiz generation failed. Please go back to the course and try again.
           </p>
         </CardContent>
@@ -130,9 +130,9 @@ export default async function QuizDetailsPage({ params }) {
 
   if (quiz.status === "completed" && questions.length === 0) {
     questionContent = (
-      <Card className="glass-panel-strong rounded-[2rem]">
-        <CardContent className="p-6 sm:p-8">
-          <p className="text-sm leading-7 text-white/62">
+      <Card className="glass-panel-strong rounded-[1.35rem] sm:rounded-[2rem]">
+        <CardContent className="p-4 sm:p-8">
+          <p className="text-sm leading-6 text-white/62 sm:leading-7">
             This quiz has no questions yet. Refresh in a moment.
           </p>
         </CardContent>
@@ -154,7 +154,7 @@ export default async function QuizDetailsPage({ params }) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6">
+    <div className="mx-auto w-full min-w-0 max-w-4xl space-y-4 sm:space-y-6">
       <div className="space-y-3">
         <Badge variant="secondary" className="w-fit">
           <FileQuestion className="h-3.5 w-3.5" />
@@ -162,7 +162,7 @@ export default async function QuizDetailsPage({ params }) {
         </Badge>
 
         <div className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+          <h1 className="break-words text-2xl font-semibold tracking-tight text-white sm:text-4xl">
             {quiz.title}
           </h1>
           <p className="text-sm text-white/52">Status: {quiz.status}</p>

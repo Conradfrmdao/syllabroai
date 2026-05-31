@@ -363,7 +363,7 @@ function renderInlineCode(text) {
       return (
         <code
           key={index}
-          className="rounded-md border border-white/10 bg-white/[0.08] px-1.5 py-0.5 font-mono text-[0.88em] text-white"
+          className="rounded-md border border-white/10 bg-white/[0.08] px-1.5 py-0.5 font-mono text-[0.88em] text-white break-words"
         >
           {codeText}
         </code>
@@ -378,11 +378,11 @@ function TextBlock({ text }) {
   const blocks = buildTextBlocks(text);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {blocks.map((block, index) => {
         if (block.type === "paragraph") {
           return (
-            <p key={index} className="text-[0.98rem] leading-8 text-white/72">
+            <p key={index} className="break-words text-sm leading-6 text-white/72 sm:text-[0.98rem] sm:leading-8">
               {renderInlineCode(block.text)}
             </p>
           );
@@ -394,10 +394,10 @@ function TextBlock({ text }) {
               {block.items.map((item, itemIndex) => (
                 <li
                   key={itemIndex}
-                  className="flex gap-3 text-[0.98rem] leading-7 text-white/72"
+                  className="flex min-w-0 gap-2.5 text-sm leading-6 text-white/72 sm:gap-3 sm:text-[0.98rem] sm:leading-7"
                 >
-                  <span className="mt-3 h-1.5 w-1.5 shrink-0 rounded-full bg-white/70" />
-                  <span>{renderInlineCode(item)}</span>
+                  <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-white/70 sm:mt-3" />
+                  <span className="min-w-0 break-words">{renderInlineCode(item)}</span>
                 </li>
               ))}
             </ul>
@@ -410,12 +410,12 @@ function TextBlock({ text }) {
               {block.items.map((item, itemIndex) => (
                 <li
                   key={itemIndex}
-                  className="flex gap-3 text-[0.98rem] leading-7 text-white/72"
+                  className="flex min-w-0 gap-2.5 text-sm leading-6 text-white/72 sm:gap-3 sm:text-[0.98rem] sm:leading-7"
                 >
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/[0.06] text-xs font-semibold text-white/70">
                     {itemIndex + 1}
                   </span>
-                  <span>{renderInlineCode(item)}</span>
+                  <span className="min-w-0 break-words">{renderInlineCode(item)}</span>
                 </li>
               ))}
             </ol>
@@ -455,13 +455,13 @@ function CodeBlock({ code }) {
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/80 shadow-[0_18px_50px_-34px_rgba(0,0,0,1)]">
-      <div className="flex items-center justify-between border-b border-white/8 px-4 py-3">
+    <div className="max-w-full overflow-hidden rounded-2xl border border-white/10 bg-black/80 shadow-[0_18px_50px_-34px_rgba(0,0,0,1)]">
+      <div className="flex items-center justify-between border-b border-white/8 px-3 py-2.5 sm:px-4 sm:py-3">
         <span className="text-xs font-medium text-white/50">Code example</span>
         {languageLabel}
       </div>
 
-      <pre className="overflow-x-auto p-4 text-sm leading-7 text-white/82">
+      <pre className="max-w-full overflow-x-auto p-3 text-sm leading-6 text-white/82 sm:p-4 sm:leading-7">
         <code>{displayCode}</code>
       </pre>
     </div>
@@ -472,7 +472,7 @@ function FormattedContent({ body }) {
   const parts = splitCodeBlocks(body);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 sm:space-y-5">
       {parts.map((part, index) => {
         if (part.type === "code") {
           return <CodeBlock key={index} code={part.value} />;
@@ -487,14 +487,14 @@ function FormattedContent({ body }) {
 function SectionNumber({ number }) {
   if (!number) {
     return (
-      <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-xs font-semibold text-white/72">
+      <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] text-xs font-semibold text-white/72 sm:h-10 sm:w-10 sm:rounded-2xl">
         AI
       </span>
     );
   }
 
   return (
-    <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white text-sm font-semibold text-black">
+    <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white text-sm font-semibold text-black sm:h-10 sm:w-10 sm:rounded-2xl">
       {number}
     </span>
   );
@@ -506,9 +506,9 @@ export default function ChapterContentRenderer({ content }) {
 
   if (!safeContent) {
     return (
-      <Card className="glass-panel-strong rounded-[2rem]">
-        <CardContent className="p-6">
-          <p className="text-sm leading-7 text-white/58">
+      <Card className="glass-panel-strong rounded-[1.35rem] sm:rounded-[2rem]">
+        <CardContent className="p-4 sm:p-6">
+          <p className="text-sm leading-6 text-white/58 sm:leading-7">
             This chapter does not have learning notes yet.
           </p>
         </CardContent>
@@ -518,15 +518,15 @@ export default function ChapterContentRenderer({ content }) {
 
   if (sections.length === 0) {
     return (
-      <Card className="glass-panel-strong rounded-[2rem]">
-        <CardHeader className="border-b border-white/8 pb-5">
+      <Card className="glass-panel-strong rounded-[1.35rem] sm:rounded-[2rem]">
+        <CardHeader className="border-b border-white/8 px-4 pb-4 sm:px-5 sm:pb-5">
           <Badge variant="secondary" className="w-fit">
             Learning Notes
           </Badge>
-          <CardTitle className="text-2xl">Chapter Content</CardTitle>
+          <CardTitle className="text-xl sm:text-2xl">Chapter Content</CardTitle>
         </CardHeader>
 
-        <CardContent className="p-6">
+        <CardContent className="p-4 sm:p-6">
           <FormattedContent body={safeContent} />
         </CardContent>
       </Card>
@@ -534,23 +534,23 @@ export default function ChapterContentRenderer({ content }) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 sm:space-y-5">
       {sections.map((section, index) => (
-        <Card key={index} className="glass-panel-strong rounded-[2rem]">
-          <CardHeader className="border-b border-white/8 pb-5">
-            <div className="flex items-start gap-4">
+        <Card key={index} className="glass-panel-strong rounded-[1.35rem] sm:rounded-[2rem]">
+          <CardHeader className="border-b border-white/8 px-4 pb-4 sm:px-5 sm:pb-5">
+            <div className="flex min-w-0 items-start gap-3 sm:gap-4">
               <SectionNumber number={section.number} />
 
-              <div className="space-y-1">
-                <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/38">
+              <div className="min-w-0 space-y-1">
+                <p className="text-[0.68rem] font-medium uppercase tracking-[0.16em] text-white/38 sm:text-xs sm:tracking-[0.2em]">
                   Learning Section
                 </p>
-                <CardTitle className="text-2xl">{section.title}</CardTitle>
+                <CardTitle className="break-words text-xl sm:text-2xl">{section.title}</CardTitle>
               </div>
             </div>
           </CardHeader>
 
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <FormattedContent body={section.body} />
           </CardContent>
         </Card>

@@ -23,8 +23,8 @@ function formatDate(date) {
 
 function InfoRow({ label, value }) {
   return (
-    <div className="min-w-0 rounded-2xl border border-white/8 bg-black/30 p-3">
-      <p className="text-xs uppercase tracking-[0.18em] text-white/36">
+    <div className="min-w-0 rounded-2xl border border-white/8 bg-black/30 p-2.5 sm:p-3">
+      <p className="text-[0.65rem] uppercase tracking-[0.14em] text-white/36 sm:text-xs sm:tracking-[0.18em]">
         {label}
       </p>
       <p className="mt-1 break-words text-sm font-medium text-white/82">
@@ -36,7 +36,7 @@ function InfoRow({ label, value }) {
 
 function SectionIcon({ children }) {
   return (
-    <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white">
+    <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] text-white sm:h-9 sm:w-9 sm:rounded-2xl">
       {children}
     </div>
   );
@@ -85,15 +85,15 @@ export default async function SettingsPage() {
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full min-w-0">
       <div className="grid gap-3 xl:grid-cols-2">
-        <Card className="glass-panel-strong rounded-[2rem]">
+        <Card className="glass-panel-strong rounded-[1.35rem] sm:rounded-[2rem]">
           <CardHeader className="border-b border-white/8 p-3">
             <div className="flex items-center gap-3">
               <SectionIcon>
                 <UserRound className="h-5 w-5" />
               </SectionIcon>
-              <CardTitle className="text-xl">Account</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">Account</CardTitle>
             </div>
           </CardHeader>
 
@@ -107,13 +107,13 @@ export default async function SettingsPage() {
           </CardContent>
         </Card>
 
-        <Card className="glass-panel-strong rounded-[2rem]">
+        <Card className="glass-panel-strong rounded-[1.35rem] sm:rounded-[2rem]">
           <CardHeader className="border-b border-white/8 p-3">
             <div className="flex items-center gap-3">
               <SectionIcon>
                 <BadgeCheck className="h-5 w-5" />
               </SectionIcon>
-              <CardTitle className="text-xl">Plan</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">Plan</CardTitle>
             </div>
           </CardHeader>
 
@@ -123,18 +123,18 @@ export default async function SettingsPage() {
           </CardContent>
         </Card>
 
-        <Card className="glass-panel-strong rounded-[2rem]">
+        <Card className="glass-panel-strong rounded-[1.35rem] sm:rounded-[2rem]">
           <CardHeader className="border-b border-white/8 p-3">
             <div className="flex items-center gap-3">
               <SectionIcon>
                 <ShieldCheck className="h-5 w-5" />
               </SectionIcon>
-              <CardTitle className="text-xl">Account Security</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">Account Security</CardTitle>
             </div>
           </CardHeader>
 
           <CardContent className="space-y-2 p-3">
-            <p className="text-sm leading-6 text-white/62">
+            <p className="text-sm leading-5 text-white/62 sm:leading-6">
               Authentication, sessions, and profile management are handled
               securely by Clerk.
             </p>
@@ -152,13 +152,13 @@ export default async function SettingsPage() {
           </CardContent>
         </Card>
 
-        <Card className="glass-panel-strong rounded-[2rem]">
+        <Card className="glass-panel-strong rounded-[1.35rem] sm:rounded-[2rem]">
           <CardHeader className="border-b border-white/8 p-3">
             <div className="flex items-center gap-3">
               <SectionIcon>
                 <CreditCard className="h-5 w-5" />
               </SectionIcon>
-              <CardTitle className="text-xl">Coming Soon</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">Coming Soon</CardTitle>
             </div>
           </CardHeader>
 
