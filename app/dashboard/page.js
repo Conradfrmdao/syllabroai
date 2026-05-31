@@ -88,71 +88,70 @@ export default async function DashboardPage() {
   let errorMessage = "";
 
   try {
-    const totalCoursesResult = await db
-      .select({
-        total: count(),
-      })
-      .from(coursesTable)
-      .where(eq(coursesTable.userId, userId));
+    const dashboardResults = await Promise.all([
+      db
+        .select({
+          total: count(),
+        })
+        .from(coursesTable)
+        .where(eq(coursesTable.userId, userId)),
+      db
+        .select({
+          total: count(),
+        })
+        .from(coursesTable)
+        .where(
+          and(
+            eq(coursesTable.userId, userId),
+            gte(coursesTable.createdAt, weekStart)
+          )
+        ),
+      db
+        .select({
+          total: count(),
+        })
+        .from(quizzesTable)
+        .where(eq(quizzesTable.userId, userId)),
+      db
+        .select({
+          total: count(),
+        })
+        .from(quizQuestionsTable)
+        .innerJoin(quizzesTable, eq(quizQuestionsTable.quizId, quizzesTable.id))
+        .where(eq(quizzesTable.userId, userId)),
+      db
+        .select({
+          total: count(),
+        })
+        .from(flashcardsTable)
+        .where(eq(flashcardsTable.userId, userId)),
+      db
+        .select({
+          total: count(),
+        })
+        .from(examsTable)
+        .where(eq(examsTable.userId, userId)),
+      db
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.clerkUserId, userId))
+        .limit(1),
+    ]);
+
+    const totalCoursesResult = dashboardResults[0];
+    const weeklyCoursesResult = dashboardResults[1];
+    const quizzesResult = dashboardResults[2];
+    const quizQuestionsResult = dashboardResults[3];
+    const flashcardsResult = dashboardResults[4];
+    const examsResult = dashboardResults[5];
+    const userResult = dashboardResults[6];
 
     totalCourses = getTotal(totalCoursesResult);
-
-    const weeklyCoursesResult = await db
-      .select({
-        total: count(),
-      })
-      .from(coursesTable)
-      .where(
-        and(
-          eq(coursesTable.userId, userId),
-          gte(coursesTable.createdAt, weekStart)
-        )
-      );
-
     coursesThisWeek = getTotal(weeklyCoursesResult);
-
-    const quizzesResult = await db
-      .select({
-        total: count(),
-      })
-      .from(quizzesTable)
-      .where(eq(quizzesTable.userId, userId));
-
     totalQuizzes = getTotal(quizzesResult);
-
-    const quizQuestionsResult = await db
-      .select({
-        total: count(),
-      })
-      .from(quizQuestionsTable)
-      .innerJoin(quizzesTable, eq(quizQuestionsTable.quizId, quizzesTable.id))
-      .where(eq(quizzesTable.userId, userId));
-
     totalQuizQuestions = getTotal(quizQuestionsResult);
-
-    const flashcardsResult = await db
-      .select({
-        total: count(),
-      })
-      .from(flashcardsTable)
-      .where(eq(flashcardsTable.userId, userId));
-
     totalFlashcards = getTotal(flashcardsResult);
-
-    const examsResult = await db
-      .select({
-        total: count(),
-      })
-      .from(examsTable)
-      .where(eq(examsTable.userId, userId));
-
     totalExams = getTotal(examsResult);
-
-    const userResult = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.clerkUserId, userId))
-      .limit(1);
 
     const user = userResult[0];
 

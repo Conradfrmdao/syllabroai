@@ -59,6 +59,138 @@ function getOrder(value, fallbackOrder) {
   return order;
 }
 
+function getJsonConfig(responseSchema, maxOutputTokens = 8192) {
+  const config = {
+    responseMimeType: "application/json",
+    temperature: 0.2,
+    maxOutputTokens: maxOutputTokens,
+  };
+
+  if (responseSchema) {
+    config.responseSchema = responseSchema;
+  }
+
+  return config;
+}
+
+function getTextConfig(maxOutputTokens = 8192) {
+  return {
+    temperature: 0.35,
+    maxOutputTokens: maxOutputTokens,
+  };
+}
+
+function getGeneratedText(response, fieldName) {
+  const text = response.text;
+
+  if (typeof text !== "string") {
+    throw new Error(`${fieldName} was not returned.`);
+  }
+
+  const cleanText = text.trim();
+
+  if (!cleanText) {
+    throw new Error(`${fieldName} was empty.`);
+  }
+
+  return cleanText;
+}
+
+const COURSE_OUTLINE_SCHEMA = {
+  type: "ARRAY",
+  items: {
+    type: "OBJECT",
+    properties: {
+      title: {
+        type: "STRING",
+      },
+      chapter_order: {
+        type: "INTEGER",
+      },
+    },
+    required: ["title", "chapter_order"],
+  },
+};
+
+const QUIZ_SCHEMA = {
+  type: "ARRAY",
+  items: {
+    type: "OBJECT",
+    properties: {
+      question: {
+        type: "STRING",
+      },
+      optionA: {
+        type: "STRING",
+      },
+      optionB: {
+        type: "STRING",
+      },
+      optionC: {
+        type: "STRING",
+      },
+      optionD: {
+        type: "STRING",
+      },
+      correctOption: {
+        type: "STRING",
+      },
+      explanation: {
+        type: "STRING",
+      },
+      question_order: {
+        type: "INTEGER",
+      },
+    },
+    required: [
+      "question",
+      "optionA",
+      "optionB",
+      "optionC",
+      "optionD",
+      "correctOption",
+      "explanation",
+      "question_order",
+    ],
+  },
+};
+
+const FLASHCARD_SCHEMA = {
+  type: "ARRAY",
+  items: {
+    type: "OBJECT",
+    properties: {
+      front: {
+        type: "STRING",
+      },
+      back: {
+        type: "STRING",
+      },
+      flashcard_order: {
+        type: "INTEGER",
+      },
+    },
+    required: ["front", "back", "flashcard_order"],
+  },
+};
+
+function buildCourseOutlineRows(parsedChapters) {
+  if (!Array.isArray(parsedChapters)) {
+    throw new Error("Course outline response was not an array.");
+  }
+
+  if (parsedChapters.length === 0) {
+    throw new Error("Course outline response did not include chapters.");
+  }
+
+  return parsedChapters.map((chapter, index) => {
+    return {
+      title: getRequiredText(chapter.title, "Chapter title"),
+      chapter_order: getOrder(chapter.chapter_order, index + 1),
+    };
+  });
+}
+
 function getCorrectOption(question) {
   let correctOption = question.correctOption;
 
@@ -173,26 +305,10 @@ function buildFlashcardRows(parsedFlashcards, courseId, userId) {
   });
 }
 
-function buildExamPayload(parsedExam) {
-  if (!parsedExam || typeof parsedExam !== "object") {
-    throw new Error("Exam response was not an object.");
-  }
-
-  let markingGuide = parsedExam.markingGuide;
-
-  if (!markingGuide) {
-    markingGuide = parsedExam.marking_guide;
-  }
-
-  return {
-    content: getRequiredText(parsedExam.content, "Exam content"),
-    markingGuide: getRequiredText(markingGuide, "Marking guide"),
-  };
-}
-
 export const testCourseGeneration = inngest.createFunction(
   {
     id: "test-course-generation",
+    retries: 2,
     triggers: {
       event: "course/generate.requested",
     },
@@ -214,140 +330,143 @@ export const testCourseGeneration = inngest.createFunction(
           .where(eq(coursesTable.id, courseId));
       });
 
-      const chapters = await step.run("generate-ai-chapters", async () => {
+      const courseOutline = await step.run("generate-course-outline", async () => {
         const response = await gemini.models.generateContent({
           model: "gemini-2.5-flash",
+          config: getJsonConfig(COURSE_OUTLINE_SCHEMA, 4096),
           contents: `
-                    You are SyllabroAI, an elite AI course architect and expert teacher.
+            You are SyllabroAI, an elite AI course architect and expert teacher.
 
-                    Your job is to create a complete beginner-to-advanced course that is clearer, deeper, and more practical than ordinary free tutorial websites.
+            Create a course outline only.
 
-                    Course title:
-                    ${title}
+            Course title:
+            ${title}
 
-                    Course description:
-                    ${description}
+            Course description:
+            ${description}
 
-                    Create the right number of chapters for the course scope.
-                    Use 6 to 12 chapters.
-                    If the topic is broad, advanced, professional, or the user asks for depth, use 9 to 12 chapters.
-                    If the topic is narrow, use 6 to 8 chapters.
+            Return ONLY valid JSON.
+            Do not include markdown fences.
+            Do not include any explanation outside JSON.
 
-                    Return ONLY valid JSON.
-                    Do not include markdown fences.
-                    Do not include backticks around the JSON.
-                    Do not include any explanation outside the JSON.
+            The JSON must be an array of chapter objects.
+            Each object must have:
+            - title
+            - chapter_order
 
-                    The JSON must be an array of chapter objects.
+            Use 6 to 8 chapters.
+            If the topic is broad, advanced, professional, or asks for depth, use 8 chapters.
+            If the topic is narrow, use 6 chapters.
 
-                    Each chapter object must have exactly these fields:
-                    - title
-                    - chapter_order
-                    - content
-
-                    Rules for chapter_order:
-                    - Use numbers starting from 1.
-                    - Chapters must flow from beginner to advanced.
-                    - The final chapter should feel more advanced and practical.
-
-                    Rules for title:
-                    - Make it clear, professional, and specific.
-                    - Avoid vague titles like "Introduction" only.
-                    - Good example: "Understanding Variables, Data Types, and Memory in JavaScript"
-
-                    Rules for content:
-                    Each chapter content must be a well-structured learning note.
-                    Each chapter must be detailed enough for serious study, not a short summary.
-                    Each chapter must include these sections in this exact order:
-
-                    1. Overview
-                    Explain what the chapter is about and why it matters.
-
-                    2. Learning Objectives
-                    List 4 to 6 clear objectives.
-
-                    3. Core Concepts
-                    Explain the main ideas deeply but simply.
-                    Use beginner-friendly language.
-                    Do not be shallow.
-                    Use analogies where useful.
-                    Include enough detail that a learner can study without immediately needing another source.
-
-                    4. Step-by-Step Explanation
-                    Break the topic into ordered steps.
-                    Explain how a learner should think through the concept.
-
-                    5. Practical Examples
-                    If the course involves programming, include realistic code examples.
-                    If the course involves mathematics, include formulas, worked examples, and explanations of each step.
-                    If the course involves science, include diagrams described in words, real-world applications, and cause-effect reasoning.
-                    If the course involves business, include scenarios, frameworks, and decision examples.
-                    If the course involves language or writing, include examples, corrections, and practice prompts.
-
-                    6. Common Mistakes
-                    List common learner mistakes and explain how to avoid them.
-
-                    7. Real-World Application
-                    Explain where this chapter is used in real life or professional work.
-
-                    8. Practice Tasks
-                    Give 4 to 7 exercises.
-                    Start easy, then increase difficulty.
-
-                    9. Quick Self-Test
-                    Give 4 to 6 short questions the learner can answer to check understanding.
-
-                    10. Summary
-                    Summarize the chapter clearly.
-
-                    Quality rules:
-                    - Write like a patient expert teacher.
-                    - Make the content detailed and useful.
-                    - Do not write generic filler.
-                    - Do not mention that you are an AI.
-                    - Do not copy from any website, book, or platform.
-                    - Use original explanations.
-                    - If code is needed, format code clearly inside the content string.
-                    - If math is needed, show the formula, substitution, and final answer.
-                    - If the topic is advanced, still start from foundations and build upward.
-
-                    JSON format example:
-                    [
-                      {
-                        "title": "Clear Chapter Title",
-                        "chapter_order": 1,
-                        "content": "1. Overview\\n...\\n\\n2. Learning Objectives\\n...\\n\\n3. Core Concepts\\n..."
-                      }
-                    ]
-                    `,
+            Rules:
+            - chapter_order must start at 1.
+            - The course must flow from foundations to advanced application.
+            - Titles must be clear, professional, and specific.
+            - Avoid vague titles like "Introduction" by itself.
+          `,
         });
 
         const parsedChapters = parseAiJson(response.text);
-
-        if (!Array.isArray(parsedChapters)) {
-          throw new Error("Gemini did not return an array.");
-        }
-
-        return parsedChapters;
+        return buildCourseOutlineRows(parsedChapters);
       });
 
-      await step.run("save-ai-chapters", async () => {
-        const chapterRows = chapters.map((chapter, index) => {
-          let chapterOrder = chapter.chapter_order;
+      const chapters = [];
 
-          if (!chapterOrder) {
-            chapterOrder = index + 1;
+      for (const outlineChapter of courseOutline) {
+        const generatedChapter = await step.run(
+          `generate-chapter-${outlineChapter.chapter_order}`,
+          async () => {
+            const response = await gemini.models.generateContent({
+              model: "gemini-2.5-flash",
+              config: getTextConfig(10000),
+              contents: `
+                You are SyllabroAI, a patient expert teacher.
+
+                Write one serious study chapter as plain text.
+                Do not return JSON.
+                Do not include markdown fences around the whole answer.
+                Start directly with "1. Overview".
+
+                Course title:
+                ${title}
+
+                Course description:
+                ${description}
+
+                Chapter ${outlineChapter.chapter_order}:
+                ${outlineChapter.title}
+
+                The chapter must include these sections in this exact order:
+
+                1. Overview
+                Explain what the chapter is about and why it matters.
+
+                2. Learning Objectives
+                List 4 to 6 clear objectives.
+
+                3. Core Concepts
+                Explain the main ideas deeply but simply.
+                Use beginner-friendly language.
+                Use analogies where useful.
+                Include enough detail that a learner can study without immediately needing another source.
+
+                4. Step-by-Step Explanation
+                Break the topic into ordered steps.
+                Explain how a learner should think through the concept.
+
+                5. Practical Examples
+                If the course involves programming, include realistic code examples.
+                If the course involves mathematics, include formulas, worked examples, and explanations of each step.
+                If the course involves science, include real-world applications and cause-effect reasoning.
+                If the course involves business, include scenarios, frameworks, and decision examples.
+                If the course involves language or writing, include examples, corrections, and practice prompts.
+
+                6. Common Mistakes
+                List common learner mistakes and explain how to avoid them.
+
+                7. Real-World Application
+                Explain where this chapter is used in real life or professional work.
+
+                8. Practice Tasks
+                Give 4 to 7 exercises.
+                Start easy, then increase difficulty.
+
+                9. Quick Self-Test
+                Give 4 to 6 short questions the learner can answer to check understanding.
+
+                10. Summary
+                Summarize the chapter clearly.
+
+                Quality rules:
+                - Write like a patient expert teacher.
+                - Make the content detailed and useful.
+                - Do not write generic filler.
+                - Do not mention that you are an AI.
+                - Use original explanations.
+                - If code is needed, format code clearly.
+                - If math is needed, show the formula, substitution, and final answer.
+                - Keep the chapter focused on this chapter title.
+              `,
+            });
+
+            return {
+              courseId: courseId,
+              title: outlineChapter.title,
+              content: getGeneratedText(response, "Chapter content"),
+              chapter_order: outlineChapter.chapter_order,
+            };
           }
+        );
 
-          return {
-            courseId: courseId,
-            title: chapter.title,
-            content: chapter.content,
-            chapter_order: chapterOrder,
-          };
-        });
+        chapters.push(generatedChapter);
+      }
 
-        await db.insert(chaptersTable).values(chapterRows);
+      await step.run("save-ai-chapters", async () => {
+        await db
+          .delete(chaptersTable)
+          .where(eq(chaptersTable.courseId, courseId));
+
+        await db.insert(chaptersTable).values(chapters);
       });
 
       await step.run("mark-course-completed", async () => {
@@ -402,6 +521,7 @@ export const testCourseGeneration = inngest.createFunction(
 export const generateQuiz = inngest.createFunction(
   {
     id: "generate-quiz",
+    retries: 2,
     triggers: {
       event: "quiz/generate.requested",
     },
@@ -420,6 +540,7 @@ export const generateQuiz = inngest.createFunction(
 
         const response = await gemini.models.generateContent({
           model: "gemini-2.5-flash",
+          config: getJsonConfig(QUIZ_SCHEMA, 8192),
           contents: `
             You are SyllabroAI, an expert teacher creating assessment material.
 
@@ -535,6 +656,7 @@ export const generateQuiz = inngest.createFunction(
 export const generateFlashcards = inngest.createFunction(
   {
     id: "generate-flashcards",
+    retries: 2,
     triggers: {
       event: "flashcards/generate.requested",
     },
@@ -552,6 +674,7 @@ export const generateFlashcards = inngest.createFunction(
 
         const response = await gemini.models.generateContent({
           model: "gemini-2.5-flash",
+          config: getJsonConfig(FLASHCARD_SCHEMA, 8192),
           contents: `
             You are SyllabroAI, an expert teacher creating active recall material.
 
@@ -639,6 +762,7 @@ export const generateFlashcards = inngest.createFunction(
 export const generateExam = inngest.createFunction(
   {
     id: "generate-exam",
+    retries: 2,
     triggers: {
       event: "exam/generate.requested",
     },
@@ -651,11 +775,12 @@ export const generateExam = inngest.createFunction(
     const chapters = event.data.chapters;
 
     try {
-      const examPayload = await step.run("generate-exam-json", async () => {
+      const examContent = await step.run("generate-exam-content", async () => {
         const chapterSourceText = getChapterSourceText(chapters);
 
         const response = await gemini.models.generateContent({
           model: "gemini-2.5-flash",
+          config: getTextConfig(10000),
           contents: `
             You are SyllabroAI, an expert teacher creating serious assessment material.
 
@@ -668,13 +793,9 @@ export const generateExam = inngest.createFunction(
             Create a serious structured exam for this course.
             The exam should feel useful for real revision, not like a short worksheet.
 
-            Return ONLY valid JSON.
-            Do not include markdown fences.
-            Do not include explanations outside JSON.
-
-            The JSON must be one object with exactly:
-            - content
-            - markingGuide
+            Return the exam paper as plain text.
+            Do not return JSON.
+            Do not include the marking guide yet.
 
             The exam content must include:
             - Instructions
@@ -685,6 +806,36 @@ export const generateExam = inngest.createFunction(
             - Section C: Practical/Application Questions with 4 questions
             - Section D: Advanced Challenge with 2 deeper questions
 
+            Quality rules:
+            - Make the exam serious and structured.
+            - Test understanding, application, and reasoning.
+            - Use the course chapters as the source of truth.
+            - Include beginner, intermediate, and advanced coverage.
+            - For programming exams, include code-reading and code-writing questions.
+            - For math exams, include worked marking steps and final answers.
+            - For business or theory exams, include scenario-based questions.
+          `,
+        });
+
+        return getGeneratedText(response, "Exam content");
+      });
+
+      const markingGuide = await step.run("generate-marking-guide", async () => {
+        const response = await gemini.models.generateContent({
+          model: "gemini-2.5-flash",
+          config: getTextConfig(10000),
+          contents: `
+            You are SyllabroAI, an expert teacher creating a marking guide.
+
+            Course title:
+            ${courseTitle}
+
+            Exam paper:
+            ${examContent}
+
+            Create the marking guide as plain text.
+            Do not return JSON.
+
             The marking guide must include:
             - correct answers
             - expected points
@@ -692,34 +843,21 @@ export const generateExam = inngest.createFunction(
             - grading notes
             - common mistakes to watch for
 
-            Quality rules:
-            - Make the exam serious and structured.
-            - Test understanding, application, and reasoning.
-            - Make the marking guide useful for self-study.
-            - Use the course chapters as the source of truth.
-            - Include beginner, intermediate, and advanced coverage.
-            - For programming exams, include code-reading and code-writing questions.
-            - For math exams, include worked marking steps and final answers.
-            - For business or theory exams, include scenario-based questions.
-
-            JSON example:
-            {
-              "content": "Instructions\\n...\\n\\nSection A: Multiple Choice\\n...",
-              "markingGuide": "Correct answers\\n...\\n\\nGrading notes\\n..."
-            }
+            Make it useful for self-study.
+            For math questions, show worked marking steps and final answers.
+            For programming questions, explain expected code behavior and common mistakes.
           `,
         });
 
-        const parsedExam = parseAiJson(response.text);
-        return buildExamPayload(parsedExam);
+        return getGeneratedText(response, "Marking guide");
       });
 
       await step.run("save-exam", async () => {
         await db
           .update(examsTable)
           .set({
-            content: examPayload.content,
-            markingGuide: examPayload.markingGuide,
+            content: examContent,
+            markingGuide: markingGuide,
             status: "completed",
           })
           .where(
