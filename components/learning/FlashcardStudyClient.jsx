@@ -71,7 +71,7 @@ export default function FlashcardStudyClient({ flashcards }) {
         type="button"
         onClick={handleFlip}
         aria-label={showBack ? "Show question side" : "Show answer side"}
-        className="group h-[24rem] w-full [perspective:1200px] sm:h-[28rem] lg:h-[30rem]"
+        className="group h-[clamp(18rem,52dvh,24rem)] w-full [perspective:1200px] sm:h-[28rem] lg:h-[30rem]"
       >
         <span
           className={`relative block h-full w-full rounded-[1.35rem] text-left shadow-[0_28px_90px_-44px_rgba(0,0,0,1)] transition-transform duration-500 ease-out [transform-style:preserve-3d] motion-reduce:transition-none sm:rounded-[2rem] ${
