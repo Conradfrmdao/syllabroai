@@ -71,33 +71,33 @@ export default function FlashcardStudyClient({ flashcards }) {
         type="button"
         onClick={handleFlip}
         aria-label={showBack ? "Show question side" : "Show answer side"}
-        className="group min-h-[14rem] w-full [perspective:1200px] sm:min-h-[20rem]"
+        className="group h-[24rem] w-full [perspective:1200px] sm:h-[28rem] lg:h-[30rem]"
       >
         <span
-          className={`relative block min-h-[14rem] w-full rounded-[1.35rem] text-left shadow-[0_28px_90px_-44px_rgba(0,0,0,1)] transition-transform duration-500 ease-out [transform-style:preserve-3d] motion-reduce:transition-none sm:min-h-[20rem] sm:rounded-[2rem] ${
+          className={`relative block h-full w-full rounded-[1.35rem] text-left shadow-[0_28px_90px_-44px_rgba(0,0,0,1)] transition-transform duration-500 ease-out [transform-style:preserve-3d] motion-reduce:transition-none sm:rounded-[2rem] ${
             showBack ? "[transform:rotateY(180deg)]" : ""
           }`}
         >
-          <span className="absolute inset-0 flex flex-col rounded-[1.35rem] border border-white/12 bg-white/[0.05] p-5 transition-colors [backface-visibility:hidden] group-hover:bg-white/[0.07] sm:rounded-[2rem] sm:p-8">
+          <span className="absolute inset-0 flex min-h-0 flex-col rounded-[1.35rem] border border-white/12 bg-white/[0.05] p-5 transition-colors [backface-visibility:hidden] group-hover:bg-white/[0.07] sm:rounded-[2rem] sm:p-8">
             <span className="text-[0.68rem] font-medium uppercase tracking-[0.18em] text-white/38 sm:text-xs sm:tracking-[0.22em]">
               Question
             </span>
-            <span className="mt-4 block break-words text-xl font-semibold leading-8 text-white sm:mt-6 sm:text-3xl sm:leading-relaxed">
+            <span className="mt-4 block min-h-0 flex-1 overflow-y-auto break-words pr-1 text-xl font-semibold leading-8 text-white sm:mt-6 sm:text-2xl sm:leading-10 lg:text-3xl lg:leading-relaxed">
               {currentFlashcard.front}
             </span>
-            <span className="mt-auto pt-5 text-sm text-white/42 sm:pt-8">
+            <span className="shrink-0 pt-5 text-sm text-white/42 sm:pt-8">
               Click the card to reveal the answer.
             </span>
           </span>
 
-          <span className="absolute inset-0 flex flex-col rounded-[1.35rem] border border-emerald-300/20 bg-emerald-300/[0.08] p-5 transition-colors [backface-visibility:hidden] [transform:rotateY(180deg)] group-hover:bg-emerald-300/[0.1] sm:rounded-[2rem] sm:p-8">
+          <span className="absolute inset-0 flex min-h-0 flex-col rounded-[1.35rem] border border-emerald-300/20 bg-emerald-300/[0.08] p-5 transition-colors [backface-visibility:hidden] [transform:rotateY(180deg)] group-hover:bg-emerald-300/[0.1] sm:rounded-[2rem] sm:p-8">
             <span className="text-[0.68rem] font-medium uppercase tracking-[0.18em] text-emerald-100/58 sm:text-xs sm:tracking-[0.22em]">
               Answer
             </span>
-            <span className="mt-4 block break-words text-xl font-semibold leading-8 text-white sm:mt-6 sm:text-3xl sm:leading-relaxed">
+            <span className="mt-4 block min-h-0 flex-1 overflow-y-auto break-words pr-1 text-lg font-semibold leading-7 text-white sm:mt-6 sm:text-2xl sm:leading-10">
               {currentFlashcard.back}
             </span>
-            <span className="mt-auto pt-5 text-sm text-emerald-50/50 sm:pt-8">
+            <span className="shrink-0 pt-5 text-sm text-emerald-50/50 sm:pt-8">
               Click the card to return to the question.
             </span>
           </span>
