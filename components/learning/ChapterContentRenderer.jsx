@@ -353,7 +353,23 @@ function buildTextBlocks(text) {
   return blocks;
 }
 
-function renderInlineCode(text) {
+function renderInlineEmphasis(text, keyPrefix = "text") {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+      return (
+        <strong key={`${keyPrefix}-strong-${index}`} className="font-semibold text-white">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+
+    return <span key={`${keyPrefix}-span-${index}`}>{part}</span>;
+  });
+}
+
+function renderInlineText(text) {
   const parts = text.split(/(`[^`]+`)/g);
 
   return parts.map((part, index) => {
@@ -370,7 +386,7 @@ function renderInlineCode(text) {
       );
     }
 
-    return <span key={index}>{part}</span>;
+    return renderInlineEmphasis(part, `part-${index}`);
   });
 }
 
@@ -383,7 +399,7 @@ function TextBlock({ text }) {
         if (block.type === "paragraph") {
           return (
             <p key={index} className="break-words text-sm leading-6 text-white/72 sm:text-[0.98rem] sm:leading-8">
-              {renderInlineCode(block.text)}
+              {renderInlineText(block.text)}
             </p>
           );
         }
@@ -397,7 +413,7 @@ function TextBlock({ text }) {
                   className="flex min-w-0 gap-2.5 text-sm leading-6 text-white/72 sm:gap-3 sm:text-[0.98rem] sm:leading-7"
                 >
                   <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-white/70 sm:mt-3" />
-                  <span className="min-w-0 break-words">{renderInlineCode(item)}</span>
+                  <span className="min-w-0 break-words">{renderInlineText(item)}</span>
                 </li>
               ))}
             </ul>
@@ -415,7 +431,7 @@ function TextBlock({ text }) {
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/[0.06] text-xs font-semibold text-white/70">
                     {itemIndex + 1}
                   </span>
-                  <span className="min-w-0 break-words">{renderInlineCode(item)}</span>
+                  <span className="min-w-0 break-words">{renderInlineText(item)}</span>
                 </li>
               ))}
             </ol>
