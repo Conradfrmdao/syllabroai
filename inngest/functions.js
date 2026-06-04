@@ -96,6 +96,8 @@ function getGeneratedText(response, fieldName) {
   return cleanText;
 }
 
+const CHAPTER_GENERATION_CONCURRENCY = 3;
+
 const COURSE_OUTLINE_SCHEMA = {
   type: "ARRAY",
   items: {
@@ -372,14 +374,25 @@ export const testCourseGeneration = inngest.createFunction(
 
       const chapters = [];
 
-      for (const outlineChapter of courseOutline) {
-        const generatedChapter = await step.run(
-          `generate-chapter-${outlineChapter.chapter_order}`,
-          async () => {
-            const response = await gemini.models.generateContent({
-              model: "gemini-2.5-flash",
-              config: getTextConfig(10000),
-              contents: `
+      for (
+        let index = 0;
+        index < courseOutline.length;
+        index += CHAPTER_GENERATION_CONCURRENCY
+      ) {
+        const chapterBatch = courseOutline.slice(
+          index,
+          index + CHAPTER_GENERATION_CONCURRENCY
+        );
+
+        const generatedChapters = await Promise.all(
+          chapterBatch.map((outlineChapter) => {
+            return step.run(
+              `generate-chapter-${outlineChapter.chapter_order}`,
+              async () => {
+                const response = await gemini.models.generateContent({
+                  model: "gemini-2.5-flash",
+                  config: getTextConfig(10000),
+                  contents: `
                 You are SyllabroAI, a patient expert teacher.
 
                 Write one serious study chapter as plain text.
@@ -447,19 +460,25 @@ export const testCourseGeneration = inngest.createFunction(
                 - If math is needed, show the formula, substitution, and final answer.
                 - Keep the chapter focused on this chapter title.
               `,
-            });
+                });
 
-            return {
-              courseId: courseId,
-              title: outlineChapter.title,
-              content: getGeneratedText(response, "Chapter content"),
-              chapter_order: outlineChapter.chapter_order,
-            };
-          }
+                return {
+                  courseId: courseId,
+                  title: outlineChapter.title,
+                  content: getGeneratedText(response, "Chapter content"),
+                  chapter_order: outlineChapter.chapter_order,
+                };
+              }
+            );
+          })
         );
 
-        chapters.push(generatedChapter);
+        chapters.push(...generatedChapters);
       }
+
+      chapters.sort((firstChapter, secondChapter) => {
+        return firstChapter.chapter_order - secondChapter.chapter_order;
+      });
 
       await step.run("save-ai-chapters", async () => {
         await db
