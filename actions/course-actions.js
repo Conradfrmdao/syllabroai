@@ -167,6 +167,133 @@ export async function createCourse(prevState, formData) {
   };
 }
 
+export async function retryCourseGeneration(prevState, formData) {
+  const courseId = formData.get("courseId");
+  const cleanCourseId = Number(courseId);
+
+  if (Number.isNaN(cleanCourseId)) {
+    return {
+      success: false,
+      message: "Invalid course ID.",
+    };
+  }
+
+  const appUser = await getOrCreateCurrentUser();
+
+  if (!appUser) {
+    return {
+      success: false,
+      message: "You must be signed in to retry this course.",
+    };
+  }
+
+  const userId = appUser.clerkUserId;
+  let generationJobId = null;
+
+  try {
+    const courseResult = await db
+      .select()
+      .from(coursesTable)
+      .where(
+        and(
+          eq(coursesTable.id, cleanCourseId),
+          eq(coursesTable.userId, userId)
+        )
+      )
+      .limit(1);
+
+    const course = courseResult[0];
+
+    if (!course) {
+      return {
+        success: false,
+        message: "Course not found.",
+      };
+    }
+
+    if (course.status === "generating" || course.status === "pending") {
+      return {
+        success: false,
+        message: "This course is already generating.",
+      };
+    }
+
+    if (course.status !== "failed") {
+      return {
+        success: false,
+        message: "Only failed courses can be retried.",
+      };
+    }
+
+    await db
+      .update(coursesTable)
+      .set({
+        status: "pending",
+      })
+      .where(
+        and(
+          eq(coursesTable.id, cleanCourseId),
+          eq(coursesTable.userId, userId)
+        )
+      );
+
+    const insertedJobs = await db
+      .insert(generationJobsTable)
+      .values({
+        userId: userId,
+        courseId: cleanCourseId,
+        jobType: "course",
+        status: "generating",
+        targetId: cleanCourseId,
+        message: "Course generation restarted.",
+      })
+      .returning({
+        id: generationJobsTable.id,
+      });
+
+    const generationJob = insertedJobs[0];
+
+    if (generationJob) {
+      generationJobId = generationJob.id;
+    }
+
+    await inngest.send({
+      name: "course/generate.requested",
+      data: {
+        courseId: cleanCourseId,
+        jobId: generationJobId,
+        userId: userId,
+        title: course.title,
+        description: course.description,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to retry course generation:", error);
+
+    if (generationJobId) {
+      try {
+        await markGenerationJobFailed(
+          generationJobId,
+          "Course generation retry could not be started."
+        );
+      } catch (jobError) {
+        console.error("Failed to mark retry job as failed:", jobError);
+      }
+    }
+
+    return {
+      success: false,
+      message: "Failed to retry course generation. Please try again.",
+    };
+  }
+
+  return {
+    success: true,
+    message: "Course generation restarted.",
+    courseId: cleanCourseId,
+  };
+}
+
 export async function deleteCourseAction(prevState, formData) {
   const courseId = formData.get("courseId");
   const cleanCourseId = Number(courseId);

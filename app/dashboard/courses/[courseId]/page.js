@@ -10,6 +10,7 @@ import GenerateExamButton from "@/components/forms/GenerateExamButton";
 import GenerateFlashcardsButton from "@/components/forms/GenerateFlashcardsButton";
 import GenerateQuizButton from "@/components/forms/GenerateQuizButton";
 import DeleteCourseButton from "@/components/forms/DeleteCourseButton";
+import RetryCourseGenerationButton from "@/components/forms/RetryCourseGenerationButton";
 import AutoRefreshWhenGenerating from "@/components/realtime/AutoRefreshWhenGenerating";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -161,6 +162,23 @@ export default async function CourseDetailsPage({ params, searchParams }) {
               {toolModeDetails.body}
             </p>
           </div>
+
+          {course.status === "failed" && (
+            <div className="space-y-4 rounded-[1.5rem] border border-amber-300/18 bg-amber-300/[0.08] p-4">
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-amber-50">
+                  Course generation did not finish.
+                </p>
+                <p className="text-sm leading-6 text-amber-50/68">
+                  This is usually temporary provider pressure or quota throttling.
+                  Retry generation to continue with the same course title and
+                  description.
+                </p>
+              </div>
+
+              <RetryCourseGenerationButton courseId={course.id} />
+            </div>
+          )}
 
           <div className="grid gap-4 lg:grid-cols-4">
             <Button asChild variant="outline" className="rounded-full">

@@ -21,7 +21,7 @@ import {
 
 const EXAM_PLACEHOLDER_CONTENT = "Exam is generating.";
 const EXAM_PLACEHOLDER_GUIDE = "Marking guide is generating.";
-const EXAM_STALE_MINUTES = 10;
+const EXAM_STALE_MINUTES = 45;
 
 function StatusContent({ status, courseId }) {
   if (status === "generating") {

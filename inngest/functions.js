@@ -14,6 +14,7 @@ import { parseAiJson } from "@/lib/ai-json";
 import {
   markGenerationJobCompleted,
   markGenerationJobFailed,
+  markGenerationJobRunning,
 } from "@/lib/generation-jobs";
 
 function getChapterSourceText(chapters) {
@@ -96,7 +97,138 @@ function getGeneratedText(response, fieldName) {
   return cleanText;
 }
 
-const CHAPTER_GENERATION_CONCURRENCY = 3;
+const GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_MAX_ATTEMPTS = 5;
+const GEMINI_REQUEST_SPACING_SECONDS = 16;
+const GEMINI_RETRY_DELAY_SECONDS = [20, 45, 90, 180];
+const RETRYABLE_AI_STATUS_CODES = [429, 500, 502, 503, 504];
+const RETRYABLE_AI_STATUSES = ["RESOURCE_EXHAUSTED", "UNAVAILABLE"];
+
+function parseAiErrorPayload(error) {
+  if (!error) {
+    return null;
+  }
+
+  if (typeof error.message !== "string") {
+    return null;
+  }
+
+  try {
+    return JSON.parse(error.message);
+  } catch {
+    return null;
+  }
+}
+
+function getAiErrorCode(error) {
+  if (typeof error?.status === "number") {
+    return error.status;
+  }
+
+  const payload = parseAiErrorPayload(error);
+  const code = payload?.error?.code;
+
+  if (typeof code === "number") {
+    return code;
+  }
+
+  return null;
+}
+
+function getAiErrorStatus(error) {
+  const payload = parseAiErrorPayload(error);
+  const status = payload?.error?.status;
+
+  if (typeof status === "string") {
+    return status;
+  }
+
+  return "";
+}
+
+function getRetryInfoDelaySeconds(error) {
+  const payload = parseAiErrorPayload(error);
+  const details = payload?.error?.details;
+
+  if (!Array.isArray(details)) {
+    return null;
+  }
+
+  for (const detail of details) {
+    const retryDelay = detail?.retryDelay;
+
+    if (typeof retryDelay !== "string") {
+      continue;
+    }
+
+    const secondsMatch = retryDelay.match(/^(\d+(?:\.\d+)?)s$/);
+
+    if (secondsMatch) {
+      return Math.ceil(Number(secondsMatch[1]));
+    }
+  }
+
+  return null;
+}
+
+function isRetryableAiError(error) {
+  const code = getAiErrorCode(error);
+  const status = getAiErrorStatus(error);
+
+  if (RETRYABLE_AI_STATUS_CODES.includes(code)) {
+    return true;
+  }
+
+  if (RETRYABLE_AI_STATUSES.includes(status)) {
+    return true;
+  }
+
+  return false;
+}
+
+function getAiRetryDelaySeconds(error, attemptIndex) {
+  const retryInfoDelay = getRetryInfoDelaySeconds(error);
+
+  if (retryInfoDelay) {
+    return Math.max(retryInfoDelay + 4, GEMINI_REQUEST_SPACING_SECONDS);
+  }
+
+  const fallbackDelay = GEMINI_RETRY_DELAY_SECONDS[attemptIndex - 1];
+
+  if (fallbackDelay) {
+    return fallbackDelay;
+  }
+
+  return GEMINI_RETRY_DELAY_SECONDS[GEMINI_RETRY_DELAY_SECONDS.length - 1];
+}
+
+async function runRetriableAiStep(step, stepId, handler) {
+  for (let attemptIndex = 1; attemptIndex <= GEMINI_MAX_ATTEMPTS; attemptIndex += 1) {
+    try {
+      return await step.run(`${stepId}-attempt-${attemptIndex}`, handler);
+    } catch (error) {
+      const hasAttemptsLeft = attemptIndex < GEMINI_MAX_ATTEMPTS;
+
+      if (!hasAttemptsLeft || !isRetryableAiError(error)) {
+        throw error;
+      }
+
+      const delaySeconds = getAiRetryDelaySeconds(error, attemptIndex);
+
+      console.warn(
+        `AI step ${stepId} failed with a retryable provider error. Retrying in ${delaySeconds}s.`,
+        error?.message ?? error
+      );
+
+      await step.sleep(
+        `${stepId}-retry-wait-${attemptIndex}`,
+        `${delaySeconds}s`
+      );
+    }
+  }
+
+  throw new Error(`AI step ${stepId} failed after retries.`);
+}
 
 const COURSE_OUTLINE_SCHEMA = {
   type: "ARRAY",
@@ -332,11 +464,14 @@ export const testCourseGeneration = inngest.createFunction(
           .where(eq(coursesTable.id, courseId));
       });
 
-      const courseOutline = await step.run("generate-course-outline", async () => {
-        const response = await gemini.models.generateContent({
-          model: "gemini-2.5-flash",
-          config: getJsonConfig(COURSE_OUTLINE_SCHEMA, 4096),
-          contents: `
+      const courseOutline = await runRetriableAiStep(
+        step,
+        "generate-course-outline",
+        async () => {
+          const response = await gemini.models.generateContent({
+            model: GEMINI_MODEL,
+            config: getJsonConfig(COURSE_OUTLINE_SCHEMA, 4096),
+            contents: `
             You are SyllabroAI, an elite AI course architect and expert teacher.
 
             Create a course outline only.
@@ -366,33 +501,29 @@ export const testCourseGeneration = inngest.createFunction(
             - Titles must be clear, professional, and specific.
             - Avoid vague titles like "Introduction" by itself.
           `,
-        });
+          });
 
-        const parsedChapters = parseAiJson(response.text);
-        return buildCourseOutlineRows(parsedChapters);
-      });
+          const parsedChapters = parseAiJson(response.text);
+          return buildCourseOutlineRows(parsedChapters);
+        }
+      );
 
       const chapters = [];
 
-      for (
-        let index = 0;
-        index < courseOutline.length;
-        index += CHAPTER_GENERATION_CONCURRENCY
-      ) {
-        const chapterBatch = courseOutline.slice(
-          index,
-          index + CHAPTER_GENERATION_CONCURRENCY
+      for (const outlineChapter of courseOutline) {
+        await step.sleep(
+          `pace-before-chapter-${outlineChapter.chapter_order}`,
+          `${GEMINI_REQUEST_SPACING_SECONDS}s`
         );
 
-        const generatedChapters = await Promise.all(
-          chapterBatch.map((outlineChapter) => {
-            return step.run(
-              `generate-chapter-${outlineChapter.chapter_order}`,
-              async () => {
-                const response = await gemini.models.generateContent({
-                  model: "gemini-2.5-flash",
-                  config: getTextConfig(10000),
-                  contents: `
+        const generatedChapter = await runRetriableAiStep(
+          step,
+          `generate-chapter-${outlineChapter.chapter_order}`,
+          async () => {
+            const response = await gemini.models.generateContent({
+              model: GEMINI_MODEL,
+              config: getTextConfig(10000),
+              contents: `
                 You are SyllabroAI, a patient expert teacher.
 
                 Write one serious study chapter as plain text.
@@ -460,20 +591,28 @@ export const testCourseGeneration = inngest.createFunction(
                 - If math is needed, show the formula, substitution, and final answer.
                 - Keep the chapter focused on this chapter title.
               `,
-                });
+            });
 
-                return {
-                  courseId: courseId,
-                  title: outlineChapter.title,
-                  content: getGeneratedText(response, "Chapter content"),
-                  chapter_order: outlineChapter.chapter_order,
-                };
-              }
-            );
-          })
+            return {
+              courseId: courseId,
+              title: outlineChapter.title,
+              content: getGeneratedText(response, "Chapter content"),
+              chapter_order: outlineChapter.chapter_order,
+            };
+          }
         );
 
-        chapters.push(...generatedChapters);
+        chapters.push(generatedChapter);
+
+        await step.run(
+          `mark-course-progress-${outlineChapter.chapter_order}`,
+          async () => {
+            await markGenerationJobRunning(
+              jobId,
+              `Generated chapter ${chapters.length} of ${courseOutline.length}.`
+            );
+          }
+        );
       }
 
       chapters.sort((firstChapter, secondChapter) => {
@@ -554,11 +693,11 @@ export const generateQuiz = inngest.createFunction(
     const chapters = event.data.chapters;
 
     try {
-      const questionRows = await step.run("generate-quiz-json", async () => {
+      const questionRows = await runRetriableAiStep(step, "generate-quiz-json", async () => {
         const chapterSourceText = getChapterSourceText(chapters);
 
         const response = await gemini.models.generateContent({
-          model: "gemini-2.5-flash",
+          model: GEMINI_MODEL,
           config: getJsonConfig(QUIZ_SCHEMA, 8192),
           contents: `
             You are SyllabroAI, an expert teacher creating assessment material.
@@ -688,11 +827,11 @@ export const generateFlashcards = inngest.createFunction(
     const chapters = event.data.chapters;
 
     try {
-      const flashcardRows = await step.run("generate-flashcard-json", async () => {
+      const flashcardRows = await runRetriableAiStep(step, "generate-flashcard-json", async () => {
         const chapterSourceText = getChapterSourceText(chapters);
 
         const response = await gemini.models.generateContent({
-          model: "gemini-2.5-flash",
+          model: GEMINI_MODEL,
           config: getJsonConfig(FLASHCARD_SCHEMA, 8192),
           contents: `
             You are SyllabroAI, an expert teacher creating active recall material.
@@ -794,11 +933,11 @@ export const generateExam = inngest.createFunction(
     const chapters = event.data.chapters;
 
     try {
-      const examContent = await step.run("generate-exam-content", async () => {
+      const examContent = await runRetriableAiStep(step, "generate-exam-content", async () => {
         const chapterSourceText = getChapterSourceText(chapters);
 
         const response = await gemini.models.generateContent({
-          model: "gemini-2.5-flash",
+          model: GEMINI_MODEL,
           config: getTextConfig(10000),
           contents: `
             You are SyllabroAI, an expert teacher creating serious assessment material.
@@ -839,9 +978,14 @@ export const generateExam = inngest.createFunction(
         return getGeneratedText(response, "Exam content");
       });
 
-      const markingGuide = await step.run("generate-marking-guide", async () => {
+      await step.sleep(
+        "pace-before-marking-guide",
+        `${GEMINI_REQUEST_SPACING_SECONDS}s`
+      );
+
+      const markingGuide = await runRetriableAiStep(step, "generate-marking-guide", async () => {
         const response = await gemini.models.generateContent({
-          model: "gemini-2.5-flash",
+          model: GEMINI_MODEL,
           config: getTextConfig(10000),
           contents: `
             You are SyllabroAI, an expert teacher creating a marking guide.
