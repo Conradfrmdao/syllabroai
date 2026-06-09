@@ -14,13 +14,11 @@ import { examsTable, generationJobsTable } from "@/db/schema";
 import { db } from "@/lib/db";
 import {
   markGenerationJobCompleted,
-  markGenerationJobFailed,
   safelyMarkStaleGenerationJobs,
 } from "@/lib/generation-jobs";
 
 const EXAM_PLACEHOLDER_CONTENT = "Exam is generating.";
 const EXAM_PLACEHOLDER_GUIDE = "Marking guide is generating.";
-const EXAM_STALE_MINUTES = 45;
 
 function hasGeneratedExamContent(exam) {
   if (!exam.content || !exam.markingGuide) {
@@ -32,30 +30,6 @@ function hasGeneratedExamContent(exam) {
   }
 
   if (exam.markingGuide === EXAM_PLACEHOLDER_GUIDE) {
-    return false;
-  }
-
-  return true;
-}
-
-function isStalePlaceholderExam(exam) {
-  if (exam.status !== "generating") {
-    return false;
-  }
-
-  if (hasGeneratedExamContent(exam)) {
-    return false;
-  }
-
-  if (!exam.createdAt) {
-    return false;
-  }
-
-  const createdAt = new Date(exam.createdAt);
-  const staleAt = new Date(createdAt.getTime() + EXAM_STALE_MINUTES * 60 * 1000);
-  const now = new Date();
-
-  if (now <= staleAt) {
     return false;
   }
 
@@ -139,40 +113,6 @@ export default async function ExamsPage() {
         exam.status = "completed";
       }
 
-      if (isStalePlaceholderExam(exam)) {
-        await db
-          .update(examsTable)
-          .set({
-            status: "failed",
-          })
-          .where(
-            and(
-              eq(examsTable.id, exam.id),
-              eq(examsTable.userId, userId)
-            )
-          );
-
-        const activeJobs = await db
-          .select()
-          .from(generationJobsTable)
-          .where(
-            and(
-              eq(generationJobsTable.userId, userId),
-              eq(generationJobsTable.jobType, "exam"),
-              eq(generationJobsTable.targetId, exam.id),
-              eq(generationJobsTable.status, "generating")
-            )
-          );
-
-        for (const job of activeJobs) {
-          await markGenerationJobFailed(
-            job.id,
-            "Exam generation timed out. Please try again."
-          );
-        }
-
-        exam.status = "failed";
-      }
     }
   } catch (error) {
     console.warn("Failed to fetch exams:", error?.message ?? error);

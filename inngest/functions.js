@@ -17,6 +17,13 @@ import {
   markGenerationJobRunning,
 } from "@/lib/generation-jobs";
 
+class RetryableAiOutputError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "RetryableAiOutputError";
+  }
+}
+
 function getChapterSourceText(chapters) {
   if (!Array.isArray(chapters)) {
     throw new Error("Chapter data was missing.");
@@ -34,13 +41,13 @@ function getChapterSourceText(chapters) {
 
 function getRequiredText(value, fieldName) {
   if (typeof value !== "string") {
-    throw new Error(`${fieldName} is missing.`);
+    throw new RetryableAiOutputError(`${fieldName} is missing.`);
   }
 
   const cleanValue = value.trim();
 
   if (!cleanValue) {
-    throw new Error(`${fieldName} is missing.`);
+    throw new RetryableAiOutputError(`${fieldName} is missing.`);
   }
 
   return cleanValue;
@@ -85,24 +92,29 @@ function getGeneratedText(response, fieldName) {
   const text = response.text;
 
   if (typeof text !== "string") {
-    throw new Error(`${fieldName} was not returned.`);
+    throw new RetryableAiOutputError(`${fieldName} was not returned.`);
   }
 
   const cleanText = text.trim();
 
   if (!cleanText) {
-    throw new Error(`${fieldName} was empty.`);
+    throw new RetryableAiOutputError(`${fieldName} was empty.`);
   }
 
   return cleanText;
 }
 
-const GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite"];
 const GEMINI_MAX_ATTEMPTS = 5;
-const GEMINI_REQUEST_SPACING_SECONDS = 16;
+const GEMINI_REQUEST_SPACING_MS = 13_000;
 const GEMINI_RETRY_DELAY_SECONDS = [20, 45, 90, 180];
-const RETRYABLE_AI_STATUS_CODES = [429, 500, 502, 503, 504];
+const RETRYABLE_AI_STATUS_CODES = [408, 429, 500, 502, 503, 504];
 const RETRYABLE_AI_STATUSES = ["RESOURCE_EXHAUSTED", "UNAVAILABLE"];
+const GEMINI_CONCURRENCY = {
+  limit: 1,
+  scope: "env",
+  key: '"gemini-generation"',
+};
 
 function parseAiErrorPayload(error) {
   if (!error) {
@@ -172,6 +184,13 @@ function getRetryInfoDelaySeconds(error) {
 }
 
 function isRetryableAiError(error) {
+  if (
+    error instanceof RetryableAiOutputError ||
+    error?.name === "RetryableAiOutputError"
+  ) {
+    return true;
+  }
+
   const code = getAiErrorCode(error);
   const status = getAiErrorStatus(error);
 
@@ -183,14 +202,38 @@ function isRetryableAiError(error) {
     return true;
   }
 
+  const message = String(error?.message ?? "");
+  const hasRetryableNetworkError =
+    message.includes("fetch failed") ||
+    message.includes("ECONNRESET") ||
+    message.includes("ETIMEDOUT") ||
+    message.includes("socket hang up");
+
+  if (hasRetryableNetworkError) {
+    return true;
+  }
+
   return false;
+}
+
+function parseGeneratedJson(rawText) {
+  try {
+    return parseAiJson(rawText);
+  } catch (error) {
+    throw new RetryableAiOutputError(
+      error?.message ?? "AI did not return valid JSON."
+    );
+  }
 }
 
 function getAiRetryDelaySeconds(error, attemptIndex) {
   const retryInfoDelay = getRetryInfoDelaySeconds(error);
 
   if (retryInfoDelay) {
-    return Math.max(retryInfoDelay + 4, GEMINI_REQUEST_SPACING_SECONDS);
+    return Math.max(
+      retryInfoDelay + 4,
+      Math.ceil(GEMINI_REQUEST_SPACING_MS / 1000)
+    );
   }
 
   const fallbackDelay = GEMINI_RETRY_DELAY_SECONDS[attemptIndex - 1];
@@ -202,29 +245,70 @@ function getAiRetryDelaySeconds(error, attemptIndex) {
   return GEMINI_RETRY_DELAY_SECONDS[GEMINI_RETRY_DELAY_SECONDS.length - 1];
 }
 
+function wait(milliseconds) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, milliseconds);
+  });
+}
+
 async function runRetriableAiStep(step, stepId, handler) {
   for (let attemptIndex = 1; attemptIndex <= GEMINI_MAX_ATTEMPTS; attemptIndex += 1) {
-    try {
-      return await step.run(`${stepId}-attempt-${attemptIndex}`, handler);
-    } catch (error) {
-      const hasAttemptsLeft = attemptIndex < GEMINI_MAX_ATTEMPTS;
+    let lastError = null;
 
-      if (!hasAttemptsLeft || !isRetryableAiError(error)) {
-        throw error;
+    for (let modelIndex = 0; modelIndex < GEMINI_MODELS.length; modelIndex += 1) {
+      const model = GEMINI_MODELS[modelIndex];
+      const safeModelName = model.replaceAll(".", "-");
+
+      try {
+        return await step.run(
+          `${stepId}-attempt-${attemptIndex}-${safeModelName}`,
+          async () => {
+            // Hold the shared concurrency slot while pacing requests across functions.
+            await wait(GEMINI_REQUEST_SPACING_MS);
+            return handler(model);
+          }
+        );
+      } catch (error) {
+        if (!isRetryableAiError(error)) {
+          throw error;
+        }
+
+        lastError = error;
+
+        const hasFallbackModel = modelIndex < GEMINI_MODELS.length - 1;
+
+        if (hasFallbackModel) {
+          console.warn(
+            `AI step ${stepId} could not use ${model}. Trying the fallback model.`,
+            {
+              code: getAiErrorCode(error),
+              status: getAiErrorStatus(error),
+            }
+          );
+        }
       }
-
-      const delaySeconds = getAiRetryDelaySeconds(error, attemptIndex);
-
-      console.warn(
-        `AI step ${stepId} failed with a retryable provider error. Retrying in ${delaySeconds}s.`,
-        error?.message ?? error
-      );
-
-      await step.sleep(
-        `${stepId}-retry-wait-${attemptIndex}`,
-        `${delaySeconds}s`
-      );
     }
+
+    const hasAttemptsLeft = attemptIndex < GEMINI_MAX_ATTEMPTS;
+
+    if (!hasAttemptsLeft) {
+      throw lastError ?? new Error(`AI step ${stepId} failed after retries.`);
+    }
+
+    const delaySeconds = getAiRetryDelaySeconds(lastError, attemptIndex);
+
+    console.warn(
+      `AI step ${stepId} failed on all models. Retrying in ${delaySeconds}s.`,
+      {
+        code: getAiErrorCode(lastError),
+        status: getAiErrorStatus(lastError),
+      }
+    );
+
+    await step.sleep(
+      `${stepId}-retry-wait-${attemptIndex}`,
+      `${delaySeconds}s`
+    );
   }
 
   throw new Error(`AI step ${stepId} failed after retries.`);
@@ -310,11 +394,15 @@ const FLASHCARD_SCHEMA = {
 
 function buildCourseOutlineRows(parsedChapters) {
   if (!Array.isArray(parsedChapters)) {
-    throw new Error("Course outline response was not an array.");
+    throw new RetryableAiOutputError(
+      "Course outline response was not an array."
+    );
   }
 
   if (parsedChapters.length === 0) {
-    throw new Error("Course outline response did not include chapters.");
+    throw new RetryableAiOutputError(
+      "Course outline response did not include chapters."
+    );
   }
 
   return parsedChapters.map((chapter, index) => {
@@ -369,7 +457,9 @@ function getCorrectOption(question) {
   const validOptions = ["A", "B", "C", "D"];
 
   if (!validOptions.includes(correctOption)) {
-    throw new Error("Quiz question has an invalid correct option.");
+    throw new RetryableAiOutputError(
+      "Quiz question has an invalid correct option."
+    );
   }
 
   return correctOption;
@@ -377,15 +467,19 @@ function getCorrectOption(question) {
 
 function buildQuizQuestionRows(parsedQuestions, quizId) {
   if (!Array.isArray(parsedQuestions)) {
-    throw new Error("Quiz response was not an array.");
+    throw new RetryableAiOutputError("Quiz response was not an array.");
   }
 
   if (parsedQuestions.length === 0) {
-    throw new Error("Quiz response did not include questions.");
+    throw new RetryableAiOutputError(
+      "Quiz response did not include questions."
+    );
   }
 
   if (parsedQuestions.length !== 10) {
-    throw new Error("Quiz response must include exactly 10 questions.");
+    throw new RetryableAiOutputError(
+      "Quiz response must include exactly 10 questions."
+    );
   }
 
   return parsedQuestions.map((question, index) => {
@@ -411,15 +505,21 @@ function buildQuizQuestionRows(parsedQuestions, quizId) {
 
 function buildFlashcardRows(parsedFlashcards, courseId, userId) {
   if (!Array.isArray(parsedFlashcards)) {
-    throw new Error("Flashcard response was not an array.");
+    throw new RetryableAiOutputError(
+      "Flashcard response was not an array."
+    );
   }
 
   if (parsedFlashcards.length === 0) {
-    throw new Error("Flashcard response did not include flashcards.");
+    throw new RetryableAiOutputError(
+      "Flashcard response did not include flashcards."
+    );
   }
 
   if (parsedFlashcards.length !== 20) {
-    throw new Error("Flashcard response must include exactly 20 flashcards.");
+    throw new RetryableAiOutputError(
+      "Flashcard response must include exactly 20 flashcards."
+    );
   }
 
   return parsedFlashcards.map((flashcard, index) => {
@@ -442,7 +542,8 @@ function buildFlashcardRows(parsedFlashcards, courseId, userId) {
 export const testCourseGeneration = inngest.createFunction(
   {
     id: "test-course-generation",
-    retries: 2,
+    retries: 0,
+    concurrency: GEMINI_CONCURRENCY,
     triggers: {
       event: "course/generate.requested",
     },
@@ -467,9 +568,9 @@ export const testCourseGeneration = inngest.createFunction(
       const courseOutline = await runRetriableAiStep(
         step,
         "generate-course-outline",
-        async () => {
+        async (model) => {
           const response = await gemini.models.generateContent({
-            model: GEMINI_MODEL,
+            model: model,
             config: getJsonConfig(COURSE_OUTLINE_SCHEMA, 4096),
             contents: `
             You are SyllabroAI, an elite AI course architect and expert teacher.
@@ -503,7 +604,7 @@ export const testCourseGeneration = inngest.createFunction(
           `,
           });
 
-          const parsedChapters = parseAiJson(response.text);
+          const parsedChapters = parseGeneratedJson(response.text);
           return buildCourseOutlineRows(parsedChapters);
         }
       );
@@ -511,17 +612,12 @@ export const testCourseGeneration = inngest.createFunction(
       const chapters = [];
 
       for (const outlineChapter of courseOutline) {
-        await step.sleep(
-          `pace-before-chapter-${outlineChapter.chapter_order}`,
-          `${GEMINI_REQUEST_SPACING_SECONDS}s`
-        );
-
         const generatedChapter = await runRetriableAiStep(
           step,
           `generate-chapter-${outlineChapter.chapter_order}`,
-          async () => {
+          async (model) => {
             const response = await gemini.models.generateContent({
-              model: GEMINI_MODEL,
+              model: model,
               config: getTextConfig(10000),
               contents: `
                 You are SyllabroAI, a patient expert teacher.
@@ -679,7 +775,8 @@ export const testCourseGeneration = inngest.createFunction(
 export const generateQuiz = inngest.createFunction(
   {
     id: "generate-quiz",
-    retries: 2,
+    retries: 0,
+    concurrency: GEMINI_CONCURRENCY,
     triggers: {
       event: "quiz/generate.requested",
     },
@@ -693,11 +790,11 @@ export const generateQuiz = inngest.createFunction(
     const chapters = event.data.chapters;
 
     try {
-      const questionRows = await runRetriableAiStep(step, "generate-quiz-json", async () => {
+      const questionRows = await runRetriableAiStep(step, "generate-quiz-json", async (model) => {
         const chapterSourceText = getChapterSourceText(chapters);
 
         const response = await gemini.models.generateContent({
-          model: GEMINI_MODEL,
+          model: model,
           config: getJsonConfig(QUIZ_SCHEMA, 8192),
           contents: `
             You are SyllabroAI, an expert teacher creating assessment material.
@@ -748,7 +845,7 @@ export const generateQuiz = inngest.createFunction(
           `,
         });
 
-        const parsedQuestions = parseAiJson(response.text);
+        const parsedQuestions = parseGeneratedJson(response.text);
         return buildQuizQuestionRows(parsedQuestions, quizId);
       });
 
@@ -814,7 +911,8 @@ export const generateQuiz = inngest.createFunction(
 export const generateFlashcards = inngest.createFunction(
   {
     id: "generate-flashcards",
-    retries: 2,
+    retries: 0,
+    concurrency: GEMINI_CONCURRENCY,
     triggers: {
       event: "flashcards/generate.requested",
     },
@@ -827,11 +925,11 @@ export const generateFlashcards = inngest.createFunction(
     const chapters = event.data.chapters;
 
     try {
-      const flashcardRows = await runRetriableAiStep(step, "generate-flashcard-json", async () => {
+      const flashcardRows = await runRetriableAiStep(step, "generate-flashcard-json", async (model) => {
         const chapterSourceText = getChapterSourceText(chapters);
 
         const response = await gemini.models.generateContent({
-          model: GEMINI_MODEL,
+          model: model,
           config: getJsonConfig(FLASHCARD_SCHEMA, 8192),
           contents: `
             You are SyllabroAI, an expert teacher creating active recall material.
@@ -871,7 +969,7 @@ export const generateFlashcards = inngest.createFunction(
           `,
         });
 
-        const parsedFlashcards = parseAiJson(response.text);
+        const parsedFlashcards = parseGeneratedJson(response.text);
         return buildFlashcardRows(parsedFlashcards, courseId, userId);
       });
 
@@ -920,7 +1018,8 @@ export const generateFlashcards = inngest.createFunction(
 export const generateExam = inngest.createFunction(
   {
     id: "generate-exam",
-    retries: 2,
+    retries: 0,
+    concurrency: GEMINI_CONCURRENCY,
     triggers: {
       event: "exam/generate.requested",
     },
@@ -933,11 +1032,11 @@ export const generateExam = inngest.createFunction(
     const chapters = event.data.chapters;
 
     try {
-      const examContent = await runRetriableAiStep(step, "generate-exam-content", async () => {
+      const examContent = await runRetriableAiStep(step, "generate-exam-content", async (model) => {
         const chapterSourceText = getChapterSourceText(chapters);
 
         const response = await gemini.models.generateContent({
-          model: GEMINI_MODEL,
+          model: model,
           config: getTextConfig(10000),
           contents: `
             You are SyllabroAI, an expert teacher creating serious assessment material.
@@ -978,14 +1077,9 @@ export const generateExam = inngest.createFunction(
         return getGeneratedText(response, "Exam content");
       });
 
-      await step.sleep(
-        "pace-before-marking-guide",
-        `${GEMINI_REQUEST_SPACING_SECONDS}s`
-      );
-
-      const markingGuide = await runRetriableAiStep(step, "generate-marking-guide", async () => {
+      const markingGuide = await runRetriableAiStep(step, "generate-marking-guide", async (model) => {
         const response = await gemini.models.generateContent({
-          model: GEMINI_MODEL,
+          model: model,
           config: getTextConfig(10000),
           contents: `
             You are SyllabroAI, an expert teacher creating a marking guide.
